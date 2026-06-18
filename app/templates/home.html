@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Home — ES TimeTrack{% endblock %}
+{% block content %}
+<h1>Welcome, {{ user.name }}</h1>
+<p class="muted">
+  You are signed in as <strong>{{ user.role.value }}</strong>.
+</p>
+
+<div class="tiles">
+  <a class="tile" href="/timesheet">
+    <h2>My timesheet</h2>
+    <p>Plan your week and log actual hours.</p>
+  </a>
+
+  {% if is_manager %}
+  <a class="tile" href="/manager">
+    <h2>Manager dashboard</h2>
+    <p>Project profitability, people, and weekly compliance.</p>
+  </a>
+  <a class="tile" href="/settings">
+    <h2>Settings</h2>
+    <p>Employees, projects, reminders and globals.</p>
+  </a>
+  {% endif %}
+</div>
+
+<p class="muted small">Tip: employees can plan a week and log actuals from the timesheet; managers also get profitability dashboards and settings.</p>
+{% endblock %}

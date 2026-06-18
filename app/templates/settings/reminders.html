@@ -1,0 +1,57 @@
+{% extends "settings/layout.html" %}
+{% block title %}Reminders — Settings{% endblock %}
+{% block settings_content %}
+
+{% macro dow_select(field, current) %}
+  <select name="{{ field }}">
+    {% for i, label in dow_names %}
+      <option value="{{ i }}" {{ 'selected' if current == (i|string) }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+{% endmacro %}
+
+<form method="post" action="/settings/reminders">
+  <div class="card form-card">
+    <h2>Schedule</h2>
+    <label class="check">
+      <input type="checkbox" name="reminder_enabled"
+             {{ 'checked' if values.reminder_enabled in ['true','1','yes','on'] }}>
+      Reminders enabled
+    </label>
+    <p class="muted small">Times are in the server timezone (Africa/Johannesburg).
+      Reminders go only to people who haven't submitted.</p>
+
+    <div class="grid-form">
+      <label>Plan reminder — day {{ dow_select('reminder_plan_dow', values.reminder_plan_dow) }}</label>
+      <label>Plan reminder — time<input type="time" name="reminder_plan_time" value="{{ values.reminder_plan_time }}"></label>
+      <label>Actuals reminder — day {{ dow_select('reminder_actuals_dow', values.reminder_actuals_dow) }}</label>
+      <label>Actuals reminder — time<input type="time" name="reminder_actuals_time" value="{{ values.reminder_actuals_time }}"></label>
+      <label>Follow-up — day {{ dow_select('reminder_followup_dow', values.reminder_followup_dow) }}</label>
+      <label>Follow-up — time<input type="time" name="reminder_followup_time" value="{{ values.reminder_followup_time }}"></label>
+      <label>Link base URL
+        <input name="email_base_url" value="{{ values.email_base_url }}" placeholder="http://server-name:8000">
+        <span class="muted small">Used to build the timesheet link in emails.</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card form-card">
+    <h2>Email templates</h2>
+    <p class="muted small">Placeholders: <code>{name}</code>, <code>{week}</code>, <code>{link}</code></p>
+
+    {% for kind, label in [('plan','Plan'), ('actuals','Actuals'), ('followup','Follow-up')] %}
+      <div class="tpl-block">
+        <h3>{{ label }}</h3>
+        <label>Subject
+          <input name="template_{{ kind }}_subject" value="{{ values['template_' ~ kind ~ '_subject'] }}">
+        </label>
+        <label>Body
+          <textarea name="template_{{ kind }}_body" rows="5">{{ values['template_' ~ kind ~ '_body'] }}</textarea>
+        </label>
+      </div>
+    {% endfor %}
+
+    <div class="form-actions"><button class="btn primary" type="submit">Save reminders</button></div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "manager/layout.html" %}
+{% block title %}This week — ES TimeTrack{% endblock %}
+{% block manager_content %}
+
+<h2>Week of {{ week_start.strftime('%d %b %Y') }}</h2>
+<p class="muted small">Live submission status for the current week. Use
+  "Send reminder" to email someone who hasn't submitted (uses the configured
+  SMTP settings and templates).</p>
+
+{% if msg %}<div class="banner ok">{{ msg }}</div>{% endif %}
+{% if err %}<div class="banner warn">{{ err }}</div>{% endif %}
+{% if failures %}
+  <div class="banner warn">Recent reminder failures for: {{ failures | join(', ') }}.
+    Check Settings → Audit log and your SMTP configuration.</div>
+{% endif %}
+
+<table class="data-table">
+  <thead>
+    <tr><th>Employee</th><th>Plan</th><th>Actuals</th><th>Send reminder</th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+      <tr class="{{ 'row-warn' if r.employee.email in failures }}">
+        <td>{{ r.employee.name }}</td>
+        <td>{% if r.plan %}<span class="pill ok">✓ submitted</span>{% else %}<span class="pill miss">— missing</span>{% endif %}</td>
+        <td>{% if r.actuals %}<span class="pill ok">✓ submitted</span>{% else %}<span class="pill miss">— missing</span>{% endif %}</td>
+        <td class="remind-actions">
+          {% if not r.plan %}
+            <form method="post" action="/manager/this-week/remind">
+              <input type="hidden" name="employee_id" value="{{ r.employee.id }}">
+              <input type="hidden" name="kind" value="plan">
+              <button class="btn ghost small-btn" type="submit">Plan</button>
+            </form>
+          {% endif %}
+          {% if not r.actuals %}
+            <form method="post" action="/manager/this-week/remind">
+              <input type="hidden" name="employee_id" value="{{ r.employee.id }}">
+              <input type="hidden" name="kind" value="actuals">
+              <button class="btn ghost small-btn" type="submit">Actuals</button>
+            </form>
+          {% endif %}
+          {% if r.plan and r.actuals %}<span class="muted small">—</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

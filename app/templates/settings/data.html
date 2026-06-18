@@ -1,0 +1,42 @@
+{% extends "settings/layout.html" %}
+{% block title %}Data — Settings{% endblock %}
+{% block settings_content %}
+
+<div class="card form-card">
+  <h2>Database backups</h2>
+  <p class="muted small">Backups are written to <code>{{ backup_dir }}</code> and
+    kept for 30 days. A consistent snapshot is taken even while the app runs.</p>
+
+  <form method="post" action="/settings/data/backup" class="inline-form">
+    <button class="btn primary" type="submit">Back up now</button>
+  </form>
+
+  <form method="post" action="/settings/data/schedule" class="inline-form" style="margin-top:1rem">
+    <label class="check"><input type="checkbox" name="backup_enabled" {{ 'checked' if enabled }}> Nightly backup enabled</label>
+    <label>Time<input type="time" name="backup_time" value="{{ backup_time }}"></label>
+    <button class="btn" type="submit">Save schedule</button>
+  </form>
+</div>
+
+<div class="card form-card">
+  <h2>Existing backups</h2>
+  {% if backups %}
+    <table class="data-table">
+      <thead><tr><th>File</th><th class="num">Size</th><th>Created</th></tr></thead>
+      <tbody>
+        {% for b in backups %}
+          <tr>
+            <td><code>{{ b.name }}</code></td>
+            <td class="num">{{ b.size_kb }} KB</td>
+            <td class="nowrap">{{ b.when.strftime('%Y-%m-%d %H:%M') }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">To restore: stop the app, copy a backup file over your
+      live database (see README), and start the app again.</p>
+  {% else %}
+    <p class="muted">No backups yet. Use "Back up now" to create the first one.</p>
+  {% endif %}
+</div>
+{% endblock %}

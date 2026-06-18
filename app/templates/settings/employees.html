@@ -1,0 +1,40 @@
+{% extends "settings/layout.html" %}
+{% block title %}Employees — Settings{% endblock %}
+{% block settings_content %}
+
+<table class="data-table">
+  <thead>
+    <tr><th>Name</th><th>Email</th><th>Role</th><th class="num">Available hrs</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for e in employees %}
+      <tr>
+        <td>{{ e.name }}</td>
+        <td>{{ e.email }}</td>
+        <td>{{ e.role.value }}</td>
+        <td class="num">{{ e.available_hours_per_year }}</td>
+        <td>{% if e.active %}<span class="pill ok">active</span>{% else %}<span class="pill miss">inactive</span>{% endif %}</td>
+        <td><a href="/settings/employees/{{ e.id }}">Edit</a></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="card form-card">
+  <h2>Add employee</h2>
+  <form method="post" action="/settings/employees" class="grid-form">
+    <label>Name<input name="name" required></label>
+    <label>Email<input type="email" name="email" required></label>
+    <label>Role
+      <select name="role">
+        <option value="employee" selected>employee</option>
+        <option value="manager">manager</option>
+      </select>
+    </label>
+    <label>Annual salary (ZAR)<input type="number" step="0.01" min="0" name="salary" value="0"></label>
+    <label>Available hrs / year<input type="number" min="1" name="available_hours" value="{{ default_hours }}"></label>
+    <label>Initial password<input type="password" name="password" minlength="8" required></label>
+    <div class="form-actions"><button class="btn primary" type="submit">Add employee</button></div>
+  </form>
+</div>
+{% endblock %}

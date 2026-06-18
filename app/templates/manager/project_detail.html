@@ -1,0 +1,76 @@
+{% extends "manager/layout.html" %}
+{% block title %}{{ project.name }} — ES TimeTrack{% endblock %}
+{% block manager_content %}
+
+<p><a href="/manager">&larr; All projects</a></p>
+
+{% if saved == 'fee' %}<div class="banner ok">Fee updated and logged.</div>{% endif %}
+
+<div class="detail-head">
+  <h2>{{ project.display_name }}
+    {% if not summary.billable %}<span class="tag">non-billable</span>{% endif %}
+  </h2>
+</div>
+
+<div class="stat-cards">
+  {% if summary.billable %}
+  <div class="stat"><span class="label">Fee</span><span class="value">{{ money(summary.fee) }}</span></div>
+  {% endif %}
+  <div class="stat"><span class="label">Hours to date</span><span class="value">{{ hrs(summary.hours) or '0' }}</span></div>
+  <div class="stat"><span class="label">Cost to date</span><span class="value">{{ money(summary.cost) }}</span></div>
+  {% if summary.profit is not none %}
+  <div class="stat"><span class="label">Profit</span>
+    <span class="value {{ 'neg' if summary.profit < 0 }}">{{ money(summary.profit) }}</span></div>
+  <div class="stat"><span class="label">Margin</span>
+    <span class="value {{ 'neg' if summary.margin is not none and summary.margin < 0 }}">{{ pct(summary.margin) }}</span></div>
+  {% endif %}
+</div>
+
+<div class="charts">
+  <div class="chart-box">
+    <h3>Cost burn vs fee</h3>
+    <div class="chart-canvas-wrap"><canvas id="burnChart"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <h3>Planned vs actual hours</h3>
+    <div class="chart-canvas-wrap"><canvas id="pvaChart"></canvas></div>
+  </div>
+</div>
+
+<h3>By employee</h3>
+<table class="data-table">
+  <thead>
+    <tr><th>Employee</th><th class="num">Hours</th><th class="num">Overtime</th><th class="num">Cost</th></tr>
+  </thead>
+  <tbody>
+    {% for b in breakdown %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td class="num">{{ hrs(b.hours) or '0' }}</td>
+        <td class="num">{{ hrs(b.overtime) or '0' }}</td>
+        <td class="num">{{ money(b.cost) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">No hours logged yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Fee</h3>
+<form method="post" action="/manager/projects/{{ project.id }}/fee" class="fee-form">
+  <label>Total professional fee (ZAR)
+    <input type="number" step="0.01" min="0" name="fee" value="{{ summary.fee }}">
+  </label>
+  <button type="submit" class="btn primary">Update fee</button>
+  <span class="muted small">Changes are recorded in the audit log.</span>
+</form>
+
+{# Chart data embedded as JSON; charts.js reads these and renders with Chart.js #}
+<script type="application/json" id="burn-data">{{ burn | tojson }}</script>
+<script type="application/json" id="pva-data">{{ pva | tojson }}</script>
+{% endblock %}
+
+{% block head_extra %}
+  <script src="/static/js/chart.min.js" defer></script>
+  <script src="/static/js/charts.js" defer></script>
+{% endblock %}

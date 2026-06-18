@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ feature }} — ES TimeTrack{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ feature }}</h1>
+  <p class="muted">This interface is scheduled for <strong>Phase {{ phase }}</strong> of the build.</p>
+  <p><a href="/">&larr; Back to home</a></p>
+</div>
+{% endblock %}

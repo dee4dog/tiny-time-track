@@ -1,0 +1,25 @@
+{% extends "settings/layout.html" %}
+{% block title %}Audit log — Settings{% endblock %}
+{% block settings_content %}
+
+<p class="muted small">Most recent 200 entries. Records salary, fee, role and
+  settings changes.</p>
+
+<table class="data-table">
+  <thead>
+    <tr><th>When (UTC)</th><th>Who</th><th>Action</th><th>Detail</th></tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+      <tr>
+        <td class="nowrap">{{ e.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ names.get(e.user_id, '—') }}</td>
+        <td><code>{{ e.action }}</code></td>
+        <td>{{ e.detail }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">No audit entries yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

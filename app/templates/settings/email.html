@@ -1,0 +1,31 @@
+{% extends "settings/layout.html" %}
+{% block title %}Email — Settings{% endblock %}
+{% block settings_content %}
+
+<div class="card form-card">
+  <h2>SMTP settings</h2>
+  <p class="muted small">Used for timesheet reminder emails (Phase 5) and the
+    test below. Default host assumes Microsoft 365.</p>
+  <form method="post" action="/settings/email" class="grid-form">
+    <label>SMTP host<input name="smtp_host" value="{{ values.smtp_host }}" placeholder="smtp.office365.com"></label>
+    <label>Port<input type="number" name="smtp_port" value="{{ values.smtp_port }}"></label>
+    <label class="check"><input type="checkbox" name="smtp_use_tls" {{ 'checked' if values.smtp_use_tls in ['true','1','yes','on'] }}> Use STARTTLS</label>
+    <label>Username<input name="smtp_username" value="{{ values.smtp_username }}" autocomplete="off"></label>
+    <label>From address<input type="email" name="smtp_from" value="{{ values.smtp_from }}" placeholder="timesheets@es.co.za"></label>
+    <label>Password
+      <input type="password" name="smtp_password" autocomplete="new-password"
+             placeholder="{{ '•••••• (leave blank to keep)' if has_password else 'enter password' }}">
+      <span class="muted small">Stored in the database; leave blank to keep the current one.</span>
+    </label>
+    <div class="form-actions"><button class="btn primary" type="submit">Save SMTP settings</button></div>
+  </form>
+</div>
+
+<div class="card form-card">
+  <h2>Send test email</h2>
+  <form method="post" action="/settings/email/test" class="inline-form">
+    <label>Send to<input type="email" name="to" value="{{ user.email }}" required></label>
+    <button class="btn" type="submit">Send test</button>
+  </form>
+</div>
+{% endblock %}

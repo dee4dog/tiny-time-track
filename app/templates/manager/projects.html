@@ -1,0 +1,67 @@
+{% extends "manager/layout.html" %}
+{% block title %}Projects — ES TimeTrack{% endblock %}
+{% block manager_content %}
+
+<div class="section-head">
+  <p class="muted small">
+    Cost-to-date uses each person's salary in effect that week (rate history),
+    overtime weighted by the overtime factor. Click a column header to sort;
+    click a project for detail.
+  </p>
+  <a class="btn ghost" href="/manager/export/projects.xlsx">Export to Excel</a>
+</div>
+
+<table class="data-table sortable" id="projects-table">
+  <thead>
+    <tr>
+      <th data-sort="text">Project</th>
+      <th data-sort="num" class="num">Fee</th>
+      <th data-sort="num" class="num">Hours</th>
+      <th data-sort="num" class="num">Cost to date</th>
+      <th data-sort="num" class="num">Profit</th>
+      <th data-sort="num" class="num">Margin</th>
+      <th>Last 4 wks</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      {% set s = row.summary %}
+      <tr onclick="window.location='/manager/projects/{{ s.project.id }}'">
+        <td>
+          {{ s.project.display_name }}
+          {% if not s.billable %}<span class="tag">non-billable</span>{% endif %}
+        </td>
+        <td class="num" data-sort-value="{{ s.fee }}">
+          {{ money(s.fee) if s.billable else '—' }}
+        </td>
+        <td class="num" data-sort-value="{{ s.hours }}">{{ hrs(s.hours) or '0' }}</td>
+        <td class="num" data-sort-value="{{ s.cost }}">{{ money(s.cost) }}</td>
+        <td class="num {{ 'neg' if s.profit is not none and s.profit < 0 }}"
+            data-sort-value="{{ s.profit if s.profit is not none else -1e18 }}">
+          {{ money(s.profit) if s.profit is not none else '—' }}
+        </td>
+        <td class="num {{ 'neg' if s.margin is not none and s.margin < 0 }}"
+            data-sort-value="{{ s.margin if s.margin is not none else -1e18 }}">
+          {{ pct(s.margin) }}
+        </td>
+        <td class="spark-cell">{{ sparkline(row.spark) | safe }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>Totals (billable)</td>
+      <td class="num">{{ money(totals.fee) }}</td>
+      <td class="num"></td>
+      <td class="num">{{ money(totals.cost) }}</td>
+      <td class="num {{ 'neg' if totals.profit < 0 }}">{{ money(totals.profit) }}</td>
+      <td class="num"></td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+
+{% if not rows %}
+  <p class="muted">No active projects yet.</p>
+{% endif %}
+{% endblock %}

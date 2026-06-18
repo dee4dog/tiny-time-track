@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ES TimeTrack{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <!-- htmx bundled locally (server may be offline). Loaded on every page. -->
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  {% if user %}
+  <header class="topbar">
+    <a class="brand" href="/">ES&nbsp;TimeTrack</a>
+    <nav>
+      <a href="/timesheet">Timesheet</a>
+      {% if user.role.value == 'manager' %}
+        <a href="/manager">Dashboard</a>
+        <a href="/settings">Settings</a>
+      {% endif %}
+    </nav>
+    <form class="logout" action="/logout" method="post">
+      <span class="who">{{ user.name }}</span>
+      <button type="submit" class="link-btn">Log out</button>
+    </form>
+  </header>
+  {% endif %}
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

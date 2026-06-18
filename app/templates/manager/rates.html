@@ -1,0 +1,35 @@
+{% extends "manager/layout.html" %}
+{% block title %}Rates — ES TimeTrack{% endblock %}
+{% block manager_content %}
+
+<div class="section-head">
+  <h2>Salaries &amp; derived hourly cost</h2>
+  <a class="btn ghost" href="/manager/people">← People</a>
+</div>
+<p class="muted small">
+  Hourly cost-to-company = annual salary × overhead multiplier ({{ overhead }})
+  ÷ available hours. Editing salaries (with rate history) comes in the Settings
+  screen (Phase 4).
+</p>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Employee</th>
+      <th class="num">Annual salary</th>
+      <th class="num">Available hrs</th>
+      <th class="num">Hourly cost</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.employee.name }}</td>
+        <td class="num">{{ money(r.salary) }}</td>
+        <td class="num">{{ r.available }}</td>
+        <td class="num">{{ money(r.hourly) }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

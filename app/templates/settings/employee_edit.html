@@ -1,0 +1,51 @@
+{% extends "settings/layout.html" %}
+{% block title %}{{ employee.name }} — Settings{% endblock %}
+{% block settings_content %}
+
+<p><a href="/settings/employees">&larr; All employees</a></p>
+
+<div class="card form-card">
+  <h2>Edit {{ employee.name }}</h2>
+  <form method="post" action="/settings/employees/{{ employee.id }}" class="grid-form">
+    <label>Name<input name="name" value="{{ employee.name }}" required></label>
+    <label>Email<input type="email" name="email" value="{{ employee.email }}" required></label>
+    <label>Role
+      <select name="role">
+        <option value="employee" {{ 'selected' if employee.role.value == 'employee' }}>employee</option>
+        <option value="manager" {{ 'selected' if employee.role.value == 'manager' }}>manager</option>
+      </select>
+    </label>
+    <label>Annual salary (ZAR)<input type="number" step="0.01" min="0" name="salary" value="{{ employee.annual_salary }}"></label>
+    <label>Available hrs / year<input type="number" min="1" name="available_hours" value="{{ employee.available_hours_per_year }}"></label>
+    <label class="check"><input type="checkbox" name="active" {{ 'checked' if employee.active }}> Active</label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Save changes</button>
+      <span class="muted small">Changing the salary records a new rate-history entry (effective today).</span>
+    </div>
+  </form>
+</div>
+
+<div class="card form-card">
+  <h2>Assigned projects</h2>
+  <p class="muted small">Projects that appear on this person's timesheet grid.</p>
+  <form method="post" action="/settings/employees/{{ employee.id }}/projects">
+    <div class="checkbox-grid">
+      {% for p in projects %}
+        <label class="check">
+          <input type="checkbox" name="project_ids" value="{{ p.id }}" {{ 'checked' if p.id in assigned }}>
+          {{ p.display_name }}
+        </label>
+      {% endfor %}
+    </div>
+    <div class="form-actions"><button class="btn" type="submit">Update assignment</button></div>
+  </form>
+</div>
+
+<div class="card form-card">
+  <h2>Reset password</h2>
+  <form method="post" action="/settings/employees/{{ employee.id }}/password" class="inline-form">
+    <label>New password<input type="password" name="password" minlength="8" required></label>
+    <button class="btn" type="submit">Reset</button>
+  </form>
+</div>
+{% endblock %}

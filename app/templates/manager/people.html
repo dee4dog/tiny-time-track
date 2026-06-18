@@ -1,0 +1,48 @@
+{% extends "manager/layout.html" %}
+{% block title %}People — ES TimeTrack{% endblock %}
+{% block manager_content %}
+
+<div class="section-head">
+  <p class="muted small">Year-to-date hours and utilisation. Compliance shows the
+    last 6 weeks (newest on the right): plan / actuals submitted.</p>
+  <span class="head-actions">
+    <a class="btn ghost" href="/manager/export/people.xlsx">Export to Excel</a>
+    <a class="btn ghost" href="/manager/rates">Rates &amp; salaries →</a>
+  </span>
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Employee</th>
+      <th class="num">Capacity</th>
+      <th class="num">Planned</th>
+      <th class="num">Actual</th>
+      <th class="num">Overtime</th>
+      <th class="num">Utilisation</th>
+      <th>Compliance (plan / actuals)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in stats %}
+      <tr>
+        <td>{{ s.employee.name }}
+          {% if s.employee.role.value == 'manager' %}<span class="tag">manager</span>{% endif %}
+        </td>
+        <td class="num">{{ s.capacity }}</td>
+        <td class="num">{{ hrs(s.planned) or '0' }}</td>
+        <td class="num">{{ hrs(s.actual) or '0' }}</td>
+        <td class="num">{{ hrs(s.overtime) or '0' }}</td>
+        <td class="num">{{ pct(s.utilisation) }}</td>
+        <td class="compliance">
+          {% for c in compliance[s.employee.id] %}
+            <span class="wk" title="Week of {{ c.week_start }}">
+              <i class="dot {{ 'on' if c.plan else 'off' }}"></i><i class="dot {{ 'on' if c.actuals else 'off' }}"></i>
+            </span>
+          {% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

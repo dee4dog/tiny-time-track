@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Timesheet — ES TimeTrack{% endblock %}
+{% block content %}
+
+{% set week_iso = week_start.isoformat() %}
+
+<div class="ts-head">
+  <h1>My timesheet</h1>
+
+  <div class="week-nav">
+    <a class="btn" href="/timesheet?week={{ prev_week.isoformat() }}" title="Previous week">‹</a>
+    <form class="week-pick" method="get" action="/timesheet">
+      <input type="date" name="week" value="{{ week_iso }}" onchange="this.form.submit()">
+      <span class="week-label">{{ week_label }}</span>
+    </form>
+    <a class="btn" href="/timesheet?week={{ next_week.isoformat() }}" title="Next week">›</a>
+    <a class="btn ghost" href="/timesheet">This week</a>
+  </div>
+</div>
+
+{% if saved %}
+  <div class="banner ok">
+    {% if saved == 'plan' %}Plan submitted — reminders for this week's plan are now off.
+    {% elif saved == 'actuals' %}Actuals submitted — thank you.
+    {% elif saved == 'copied' %}Last week's plan was copied in.
+    {% else %}Saved.{% endif %}
+  </div>
+{% endif %}
+
+{% if locked %}
+  <div class="banner warn">
+    This week is locked (actuals were submitted more than 7 days ago).
+    Ask a manager to unlock it if you need to make changes.
+  </div>
+{% endif %}
+
+<div class="ts-status">
+  <span class="chip {{ 'done' if status and status.planned_submitted_at }}">
+    Plan: {{ '✓ submitted' if status and status.planned_submitted_at else 'not submitted' }}
+  </span>
+  <span class="chip {{ 'done' if status and status.actuals_submitted_at }}">
+    Actuals: {{ '✓ submitted' if status and status.actuals_submitted_at else 'not submitted' }}
+  </span>
+
+  <div class="mode-toggle" role="group" aria-label="Edit mode">
+    <button type="button" class="mode-btn" data-mode="plan">Plan</button>
+    <button type="button" class="mode-btn" data-mode="actual">Actual</button>
+  </div>
+</div>
+
+{% if rows %}
+<div id="grid" class="ts mode-plan" data-week="{{ week_iso }}">
+  <table class="grid-table">
+    <thead>
+      <tr>
+        <th class="proj-col">Project</th>
+        {% for name in day_names %}
+          <th class="day-col">{{ name }}<span class="day-date">{{ day_dates[loop.index0].day }}</span></th>
+        {% endfor %}
+        <th class="total-col">Week</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        {% set p = row.project %}
+        <tr>
+          <th class="proj-cell" scope="row">
+            {{ p.display_name }}
+            {% if not p.billable %}<span class="tag">non-billable</span>{% endif %}
+          </th>
+          {% for c in row.cells %}
+            <td class="cell">
+              {# Plan mode: single planned-hours input #}
+              <input class="hrs plan-field" type="number" min="0" max="12" step="0.5"
+                     inputmode="decimal" data-day="{{ c.day }}"
+                     value="{{ hrs(c.planned) }}" {{ 'disabled' if locked }}
+                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
+                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "planned", "week": "{{ week_iso }}"}'
+                     aria-label="Planned hours, {{ p.name }}, {{ day_names[c.day] }}">
+
+              {# Actual mode: actual hours + overtime + optional note #}
+              <input class="hrs actual-field" type="number" min="0" max="12" step="0.5"
+                     inputmode="decimal" data-day="{{ c.day }}"
+                     value="{{ hrs(c.actual) }}" {{ 'disabled' if locked }}
+                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
+                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "actual", "week": "{{ week_iso }}"}'
+                     aria-label="Actual hours, {{ p.name }}, {{ day_names[c.day] }}">
+              <input class="ot actual-field" type="number" min="0" max="16" step="0.5"
+                     inputmode="decimal" placeholder="OT"
+                     value="{{ hrs(c.overtime) }}" {{ 'disabled' if locked }}
+                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
+                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "overtime", "week": "{{ week_iso }}"}'
+                     aria-label="Overtime hours, {{ p.name }}, {{ day_names[c.day] }}">
+              <input class="note actual-field" type="text" maxlength="500" placeholder="note"
+                     value="{{ c.note }}" {{ 'disabled' if locked }}
+                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
+                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "note", "week": "{{ week_iso }}"}'
+                     aria-label="Note, {{ p.name }}, {{ day_names[c.day] }}">
+            </td>
+          {% endfor %}
+          <td class="row-total" data-row-total>0</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th class="proj-cell" scope="row">Day total</th>
+        {% for name in day_names %}
+          <td class="day-total" data-day-total="{{ loop.index0 }}">0</td>
+        {% endfor %}
+        <td class="grand-total" data-grand-total>0</td>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="muted small grid-hint">
+    Tip: use arrow keys to move between cells. Half-hour steps (0.5). Overtime (OT) is
+    counted separately from the day total. Entries save automatically.
+  </p>
+</div>
+{% else %}
+  <div class="card">
+    <p class="muted">You have no projects on your grid yet. Add one below to start planning.</p>
+  </div>
+{% endif %}
+
+<div class="ts-actions">
+  <form method="post" action="/timesheet/submit">
+    <input type="hidden" name="week" value="{{ week_iso }}">
+    <input type="hidden" name="which" value="plan">
+    <button type="submit" class="btn" {{ 'disabled' if locked }}>Submit plan</button>
+  </form>
+  <form method="post" action="/timesheet/submit">
+    <input type="hidden" name="week" value="{{ week_iso }}">
+    <input type="hidden" name="which" value="actuals">
+    <button type="submit" class="btn primary" {{ 'disabled' if locked }}>Submit actuals</button>
+  </form>
+  <form method="post" action="/timesheet/copy-last-week"
+        onsubmit="return confirm('Copy last week\'s plan into this week? Existing entries are kept.')">
+    <input type="hidden" name="week" value="{{ week_iso }}">
+    <button type="submit" class="btn ghost" {{ 'disabled' if locked }}>Copy last week's plan</button>
+  </form>
+
+  {% if addable %}
+  <form method="post" action="/timesheet/add-project" class="add-project">
+    <input type="hidden" name="week" value="{{ week_iso }}">
+    <select name="project_id" required>
+      <option value="" disabled selected>Add a project…</option>
+      {% for p in addable %}
+        <option value="{{ p.id }}">{{ p.display_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn ghost">Add</button>
+  </form>
+  {% endif %}
+</div>
+
+{% endblock %}

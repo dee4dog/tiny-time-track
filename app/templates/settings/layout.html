@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mgr-head">
+  <h1>Settings</h1>
+  <nav class="tabs">
+    <a href="/settings/employees" class="tab {{ 'active' if tab == 'employees' }}">Employees</a>
+    <a href="/settings/projects" class="tab {{ 'active' if tab == 'projects' }}">Projects</a>
+    <a href="/settings/globals" class="tab {{ 'active' if tab == 'globals' }}">Globals</a>
+    <a href="/settings/email" class="tab {{ 'active' if tab == 'email' }}">Email</a>
+    <a href="/settings/reminders" class="tab {{ 'active' if tab == 'reminders' }}">Reminders</a>
+    <a href="/settings/data" class="tab {{ 'active' if tab == 'data' }}">Data</a>
+    <a href="/settings/audit" class="tab {{ 'active' if tab == 'audit' }}">Audit log</a>
+  </nav>
+</div>
+
+{% if msg %}<div class="banner ok">{{ msg }}</div>{% endif %}
+{% if err %}<div class="banner warn">{{ err }}</div>{% endif %}
+
+{% block settings_content %}{% endblock %}
+{% endblock %}

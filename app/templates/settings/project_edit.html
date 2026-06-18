@@ -1,0 +1,28 @@
+{% extends "settings/layout.html" %}
+{% block title %}{{ project.name }} — Settings{% endblock %}
+{% block settings_content %}
+
+<p><a href="/settings/projects">&larr; All projects</a></p>
+
+<div class="card form-card">
+  <h2>Edit project</h2>
+  <form method="post" action="/settings/projects/{{ project.id }}" class="grid-form">
+    <label>Leader<input name="leader" value="{{ project.leader }}"></label>
+    <label>Name<input name="name" value="{{ project.name }}" required></label>
+    <label>Number<input name="number" value="{{ project.number }}"></label>
+    <label>Fee (ZAR)<input type="number" step="0.01" min="0" name="fee" value="{{ project.fee }}"></label>
+    <label class="check"><input type="checkbox" name="billable" {{ 'checked' if project.billable }}> Billable</label>
+    <label>Status
+      <select name="status">
+        {% for s in statuses %}
+          <option value="{{ s.value }}" {{ 'selected' if project.status == s }}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Save changes</button>
+      <span class="muted small">Set status to <em>archived</em> to hide it while keeping all history.</span>
+    </div>
+  </form>
+</div>
+{% endblock %}

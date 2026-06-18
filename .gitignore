@@ -1,0 +1,26 @@
+# Environment / secrets
+.env
+
+# Database & backups
+*.db
+*.db-wal
+*.db-shm
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code local settings (machine-specific permissions)
+.claude/settings.local.json
+
+# Logs
+logs/
+*.log

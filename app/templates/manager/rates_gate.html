@@ -1,0 +1,15 @@
+{% extends "manager/layout.html" %}
+{% block title %}Rates — ES TimeTrack{% endblock %}
+{% block manager_content %}
+<div class="card">
+  <h2>Salaries &amp; rates</h2>
+  <p class="muted">
+    This page shows <strong>personal salary information</strong> (POPIA). It is
+    visible to managers only. Please confirm you want to view it.
+  </p>
+  <p>
+    <a class="btn primary" href="/manager/rates?confirm=1">Show salaries</a>
+    <a class="btn ghost" href="/manager/people">Cancel</a>
+  </p>
+</div>
+{% endblock %}

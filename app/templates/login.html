@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Sign in — ES TimeTrack{% endblock %}
+{% block content %}
+<div class="card login-card">
+  <h1>ES TimeTrack</h1>
+  <p class="muted">Sign in to your timesheet.</p>
+
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/login" class="stack">
+    <label>
+      Email
+      <input type="email" name="email" autocomplete="username" required autofocus>
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="btn primary">Sign in</button>
+  </form>
+</div>
+{% endblock %}

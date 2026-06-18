@@ -1,0 +1,28 @@
+{% extends "settings/layout.html" %}
+{% block title %}Globals — Settings{% endblock %}
+{% block settings_content %}
+
+<div class="card form-card">
+  <h2>Global settings</h2>
+  <form method="post" action="/settings/globals" class="grid-form">
+    <label>Overhead multiplier
+      <input type="number" step="0.01" min="0" name="overhead_multiplier" value="{{ values.overhead_multiplier }}">
+      <span class="muted small">Salary × this = cost-to-company.</span>
+    </label>
+    <label>Overtime factor
+      <input type="number" step="0.1" min="0" name="overtime_factor" value="{{ values.overtime_factor }}">
+      <span class="muted small">1.5 = BCEA; set 1.0 if overtime isn't paid extra.</span>
+    </label>
+    <label>Default available hrs / year
+      <input type="number" min="1" name="available_hours_default" value="{{ values.available_hours_default }}">
+    </label>
+    <label>Currency symbol
+      <input name="currency_symbol" value="{{ values.currency_symbol }}" maxlength="4">
+    </label>
+    <label>Company name
+      <input name="company_name" value="{{ values.company_name }}">
+    </label>
+    <div class="form-actions"><button class="btn primary" type="submit">Save globals</button></div>
+  </form>
+</div>
+{% endblock %}

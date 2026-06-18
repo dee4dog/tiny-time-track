@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mgr-head">
+  <h1>Manager dashboard</h1>
+  <nav class="tabs">
+    <a href="/manager" class="tab {{ 'active' if tab == 'projects' }}">Projects</a>
+    <a href="/manager/people" class="tab {{ 'active' if tab == 'people' }}">People</a>
+    <a href="/manager/this-week" class="tab {{ 'active' if tab == 'this_week' }}">This week</a>
+  </nav>
+</div>
+{% block manager_content %}{% endblock %}
+{% endblock %}
