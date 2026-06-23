@@ -1,4 +1,4 @@
-# ES TimeTrack
+# TimeTrack
 
 Self-hosted office time tracking and project profitability for the ES team.
 Runs entirely on a local Windows server — no cloud dependencies.
