@@ -1,3 +1,4 @@
+<img width="1254" height="1254" alt="ChatGPT Image Jun 23, 2026, 08_44_53 PM" src="https://github.com/user-attachments/assets/0634de43-8ed2-42ed-8afb-88e620601697" />
 # TimeTrack
 
 Self-hosted office time tracking and project profitability for the BI as part of AIBI.
