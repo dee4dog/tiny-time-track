@@ -1,6 +1,6 @@
 # TimeTrack
 
-Self-hosted office time tracking and project profitability for the ES team.
+Self-hosted office time tracking and project profitability for the BI as part of AIBI.
 Runs entirely on a local Windows server — no cloud dependencies.
 
 > **Build status:** Complete — all six phases built and verified.
