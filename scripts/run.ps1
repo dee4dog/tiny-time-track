@@ -1,4 +1,4 @@
-# Start the ES TimeTrack server (development / manual run).
+# Start the Tiny Time Track server (development / manual run).
 # For unattended operation on the office server, install it as a Windows
 # service instead - see the README "Running as a Windows service" section.
 
@@ -11,5 +11,5 @@ if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
     exit 1
 }
 
-Write-Host "Starting ES TimeTrack on http://localhost:8000 (Ctrl+C to stop)..." -ForegroundColor Cyan
+Write-Host "Starting Tiny Time Track on http://localhost:8000 (Ctrl+C to stop)..." -ForegroundColor Cyan
 & ".\.venv\Scripts\python.exe" -m app

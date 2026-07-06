@@ -1,4 +1,4 @@
-# ES TimeTrack - one-shot setup for a fresh machine.
+# Tiny Time Track - one-shot setup for a fresh machine.
 # Run from the project root:   .\scripts\setup.ps1
 # Idempotent: safe to run again. Creates the venv, installs dependencies,
 # and writes a .env with a real secret key if one doesn't exist yet.
@@ -6,7 +6,7 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
-Write-Host "ES TimeTrack setup - $root" -ForegroundColor Cyan
+Write-Host "Tiny Time Track setup - $root" -ForegroundColor Cyan
 
 # 1. Find a suitable Python (3.11+).
 function Get-Python {

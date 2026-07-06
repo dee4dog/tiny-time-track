@@ -11,10 +11,14 @@
     try { return JSON.parse(el.textContent); } catch (e) { return null; }
   }
 
-  const accent = "#2f6fed";
-  const danger = "#c0392b";
-  const amber = "#d39c00";
-  const grid = "rgba(0,0,0,0.06)";
+  // Pull the live theme colours so charts match the CSS palette.
+  const css = getComputedStyle(document.documentElement);
+  const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+  const accent = v("--accent", "#c2674a");
+  const danger = v("--danger", "#c0563e");
+  const amber = v("--amber", "#cf9a4e");
+  const accentFill = v("--accent-soft", "rgba(194,103,74,0.12)");
+  const grid = "rgba(120,72,52,0.08)";
 
   const moneyTicks = {
     callback: (v) => "R " + Number(v).toLocaleString("en-ZA").replace(/,/g, " "),
@@ -34,7 +38,7 @@
             label: "Cumulative cost",
             data: burn.values,
             borderColor: accent,
-            backgroundColor: "rgba(47,111,237,0.08)",
+            backgroundColor: accentFill,
             fill: true,
             tension: 0.2,
             pointRadius: 2,
@@ -71,7 +75,7 @@
       data: {
         labels: pva.labels,
         datasets: [
-          { label: "Planned", data: pva.planned, backgroundColor: "rgba(47,111,237,0.55)" },
+          { label: "Planned", data: pva.planned, backgroundColor: accent },
           { label: "Actual", data: pva.actual, backgroundColor: amber },
         ],
       },

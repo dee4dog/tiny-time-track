@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import __version__, scheduler
@@ -39,7 +40,7 @@ async def lifespan(_app: FastAPI):
         scheduler.shutdown()
 
 
-app = FastAPI(title="ES TimeTrack", version=__version__, lifespan=lifespan)
+app = FastAPI(title="Tiny Time Track", version=__version__, lifespan=lifespan)
 
 # Signs the session cookie so its contents can't be tampered with.
 # same_site="lax" is fine for a same-origin LAN app; https_only is left off
@@ -50,6 +51,10 @@ app.add_middleware(
     same_site="lax",
     max_age=14 * 24 * 60 * 60,  # 14 days
 )
+
+# Compress responses over 1KB (HTML pages and the bundled JS/CSS shrink
+# ~70-80% on the wire; Chart.js alone drops from ~205KB to ~70KB).
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 

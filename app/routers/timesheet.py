@@ -13,12 +13,13 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import timesheet_service as ts
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import Employee
+from app.models import Employee, PlanReview
 from app.templating import templates
 from app.weeks import DAY_NAMES, format_week_range, parse_week, shift_week, week_days
 
@@ -44,6 +45,11 @@ def timesheet(
     rows = ts.build_grid(db, user, week_start)
     status = ts.get_week_status(db, user, week_start)
     locked = ts.is_locked(db, user, week_start)
+    review = db.scalar(
+        select(PlanReview).where(
+            PlanReview.employee_id == user.id, PlanReview.week_start == week_start
+        )
+    )
 
     return templates.TemplateResponse(
         "timesheet.html",
@@ -59,6 +65,7 @@ def timesheet(
             "rows": rows,
             "status": status,
             "locked": locked,
+            "review": review,
             "addable": ts.addable_projects(db, user),
             "saved": saved,
         },

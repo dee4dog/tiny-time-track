@@ -8,9 +8,8 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.costing import ZERO, RateResolver
+from app.costing import ONE, ZERO, RateResolver, overtime_for_entry
 from app.models import Employee, TimeEntry, WeekStatus
-from app.settings_store import get_decimal
 from app.weeks import monday_of
 
 
@@ -20,7 +19,7 @@ class PersonStats:
     capacity: int                 # available hours per year
     planned: Decimal = ZERO       # year-to-date
     actual: Decimal = ZERO
-    overtime: Decimal = ZERO
+    overtime: Decimal = ZERO      # of which over 8h/day (derived)
     cost: Decimal = ZERO
 
     @property
@@ -37,7 +36,7 @@ def people_overview(db: Session, *, year: int | None = None) -> list[PersonStats
     year_start = date(year, 1, 1)
     year_end = date(year, 12, 31)
     resolver = RateResolver(db)
-    overtime_factor = get_decimal(db, "overtime_factor")
+    overtime_factor = resolver.overtime_factor
 
     employees = list(
         db.scalars(select(Employee).where(Employee.active).order_by(Employee.name))
@@ -51,11 +50,14 @@ def people_overview(db: Session, *, year: int | None = None) -> list[PersonStats
         s = stats.get(e.employee_id)
         if s is None:
             continue  # entry belongs to a deactivated employee; skip in this view
-        worked = (e.actual_hours or ZERO) + (e.overtime_hours or ZERO)
-        paid = (e.actual_hours or ZERO) + (e.overtime_hours or ZERO) * overtime_factor
+        worked = e.actual_hours or ZERO
+        overtime = overtime_for_entry(
+            worked, resolver.day_total(e.employee_id, e.week_start, e.day)
+        )
+        paid = worked + overtime * (overtime_factor - ONE)
         s.planned += e.planned_hours or ZERO
         s.actual += worked
-        s.overtime += e.overtime_hours or ZERO
+        s.overtime += overtime
         s.cost += paid * resolver.hourly_rate(e.employee_id, e.week_start)
 
     return list(stats.values())

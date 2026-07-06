@@ -1,4 +1,4 @@
-# Project Brief: ES TimeTrack — Office Time & Profitability App
+# Project Brief: Tiny Time Track — Office Time & Profitability App
 
 ## 1. Overview
 
@@ -19,7 +19,7 @@ Authentication: username (email) + password, hashed with bcrypt/argon2. Server-s
 
 ## 3. Technology Stack
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy, SQLite (single-file DB at a configurable path, e.g. `D:\TimeTrack\timetrack.db`)
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy, SQLite (single-file DB at a configurable path, e.g. `D:\Tiny Time Track\timetrack.db`)
 - **Frontend:** Server-rendered HTML (Jinja2) with light vanilla JS or htmx for interactivity. No build pipeline, no Node toolchain. Must work in Edge/Chrome.
 - **Scheduler:** APScheduler inside the app process for email reminders.
 - **Email:** SMTP, configurable in Settings (host, port, TLS, username, password, from-address). Default assumption: Microsoft 365 (`smtp.office365.com:587`).

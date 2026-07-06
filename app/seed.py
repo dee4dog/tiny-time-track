@@ -5,8 +5,8 @@ Creates the five known projects from the brief plus two sample accounts
 running it again will not duplicate rows.
 
 Demo logins (CHANGE or remove before real use):
-    manager:  manager@es.local  / changeme123
-    employee: anel@es.local     / changeme123
+    manager:  manager@tiny.local  / changeme123
+    employee: anel@tiny.local     / changeme123
 """
 from __future__ import annotations
 
@@ -73,11 +73,11 @@ def seed_demo_data(db: Session) -> None:
 
     # Sample accounts
     manager = _get_or_create_employee(
-        db, name="Manager", email="manager@es.local", role=Role.manager,
+        db, name="Manager", email="manager@tiny.local", role=Role.manager,
         salary=Decimal("780000"),
     )
     anel = _get_or_create_employee(
-        db, name="Anel", email="anel@es.local", role=Role.employee,
+        db, name="Anel", email="anel@tiny.local", role=Role.employee,
         salary=Decimal("480000"),
     )
 

@@ -83,9 +83,9 @@ def send_test_email(db: Session, to: str) -> tuple[bool, str]:
     return send_email(
         db,
         to=to,
-        subject="ES TimeTrack — test email",
+        subject="Tiny Time Track — test email",
         body=(
-            "This is a test email from ES TimeTrack.\n\n"
+            "This is a test email from Tiny Time Track.\n\n"
             "If you received this, your SMTP settings are working."
         ),
     )

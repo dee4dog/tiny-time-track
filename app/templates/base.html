@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}ES TimeTrack{% endblock %}</title>
+  <title>{% block title %}Tiny Time Track{% endblock %}</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ asset_ver('css/app.css') }}">
   <!-- htmx bundled locally (server may be offline). Loaded on every page. -->
   <script src="/static/js/htmx.min.js" defer></script>
-  <script src="/static/js/app.js" defer></script>
+  <script src="/static/js/app.js?v={{ asset_ver('js/app.js') }}" defer></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
   {% if user %}
   <header class="topbar">
-    <a class="brand" href="/">ES&nbsp;TimeTrack</a>
+    <a class="brand" href="/">Tiny Time Track</a>
     <nav>
       <a href="/timesheet">Timesheet</a>
       {% if user.role.value == 'manager' %}

@@ -9,7 +9,7 @@ Business rules (brief section 5):
   that applied then - not today's salary.
 
 * Project cost to date:
-      sum over entries of (actual_hours + overtime_hours x overtime_factor) x rate
+      sum over entries of actual_hours x rate
   where ``rate`` is that employee's hourly cost for the entry's week.
 
 * Profit = fee - cost.   Margin % = profit / fee.
@@ -32,6 +32,27 @@ from app.settings_store import get_decimal
 from app.weeks import monday_of
 
 ZERO = Decimal("0")
+ONE = Decimal("1")
+
+# Hours an employee can work in one day before the surplus counts as overtime.
+DAY_REGULAR_HOURS = Decimal("8")
+
+
+def overtime_for_entry(actual: Decimal, day_total: Decimal) -> Decimal:
+    """Overtime portion of a single entry's actual hours.
+
+    Overtime is measured per employee per day: anything over 8 hours across
+    *all* that day's projects is overtime. That day surplus is apportioned
+    back to each entry in proportion to its share of the day's hours, so a
+    9-hour day split 6h/3h across two projects books 2/3 and 1/3 of the 1
+    overtime hour to those projects.
+    """
+    if actual <= ZERO or day_total <= ZERO:
+        return ZERO
+    day_overtime = day_total - DAY_REGULAR_HOURS
+    if day_overtime <= ZERO:
+        return ZERO
+    return actual * day_overtime / day_total
 
 
 # --------------------------------------------------------------------------- #
@@ -47,9 +68,26 @@ class RateResolver:
     def __init__(self, db: Session):
         self.db = db
         self.overhead = get_decimal(db, "overhead_multiplier")
+        self.overtime_factor = get_decimal(db, "overtime_factor")
         self._employees: dict[int, Employee] = {}
         self._history: dict[int, list[RateHistory]] = {}
         self._cache: dict[tuple[int, date], Decimal] = {}
+        # Lazily-built total actual hours per (employee, week_start, day), summed
+        # across all projects — needed to split per-day overtime.
+        self._day_totals: dict[tuple[int, date, int], Decimal] | None = None
+
+    def day_total(self, employee_id: int, week_start: date, day: int) -> Decimal:
+        """Total actual hours this employee logged that day across all projects."""
+        if self._day_totals is None:
+            self._day_totals = {}
+            stmt = select(
+                TimeEntry.employee_id, TimeEntry.week_start,
+                TimeEntry.day, TimeEntry.actual_hours,
+            )
+            for emp_id, wk, d, actual in self.db.execute(stmt):
+                key = (emp_id, wk, d)
+                self._day_totals[key] = self._day_totals.get(key, ZERO) + (actual or ZERO)
+        return self._day_totals.get((employee_id, week_start, day), ZERO)
 
     def _employee(self, employee_id: int) -> Employee | None:
         if employee_id not in self._employees:
@@ -100,15 +138,15 @@ class RateResolver:
 class EmployeeBreakdown:
     employee_id: int
     name: str
-    hours: Decimal = ZERO          # actual + overtime
-    overtime: Decimal = ZERO
+    hours: Decimal = ZERO          # actual hours worked
+    overtime: Decimal = ZERO       # of which over 8h/day (derived)
     cost: Decimal = ZERO
 
 
 @dataclass
 class ProjectSummary:
     project: Project
-    hours: Decimal = ZERO          # total worked hours (actual + overtime)
+    hours: Decimal = ZERO          # total worked (actual) hours
     cost: Decimal = ZERO
     by_employee: dict[int, EmployeeBreakdown] = field(default_factory=dict)
     weekly_cost: dict[date, Decimal] = field(default_factory=dict)
@@ -142,13 +180,17 @@ def summarise_project(
 ) -> ProjectSummary:
     """Full cost breakdown for one project (employee split + weekly series)."""
     resolver = resolver or RateResolver(db)
-    overtime_factor = get_decimal(db, "overtime_factor")
+    overtime_factor = resolver.overtime_factor
     summary = ProjectSummary(project=project)
 
     stmt = select(TimeEntry).where(TimeEntry.project_id == project.id)
     for e in db.scalars(stmt):
-        worked = (e.actual_hours or ZERO) + (e.overtime_hours or ZERO)
-        paid = (e.actual_hours or ZERO) + (e.overtime_hours or ZERO) * overtime_factor
+        worked = e.actual_hours or ZERO
+        overtime = overtime_for_entry(
+            worked, resolver.day_total(e.employee_id, e.week_start, e.day)
+        )
+        # Overtime hours are paid at the overtime factor; the rest at 1x.
+        paid = worked + overtime * (overtime_factor - ONE)
         rate = resolver.hourly_rate(e.employee_id, e.week_start)
         cost = paid * rate
 
@@ -164,7 +206,7 @@ def summarise_project(
             )
             summary.by_employee[e.employee_id] = bd
         bd.hours += worked
-        bd.overtime += e.overtime_hours or ZERO
+        bd.overtime += overtime
         bd.cost += cost
 
         wk = e.week_start

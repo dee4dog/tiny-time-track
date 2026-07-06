@@ -140,7 +140,7 @@ def cmd_seed(_args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m app.cli", description="ES TimeTrack admin CLI")
+    parser = argparse.ArgumentParser(prog="python -m app.cli", description="Tiny Time Track admin CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("init-db", help="create database tables")

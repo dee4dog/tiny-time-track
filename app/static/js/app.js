@@ -1,4 +1,4 @@
-// ES TimeTrack — front-end behaviour.
+// Tiny Time Track — front-end behaviour.
 //   * Timesheet grid: Plan/Actual toggle, live coloured totals, arrow-key nav.
 //   * Manager tables: click-to-sort columns.
 // Persistence on the grid is handled by htmx (each input posts on change).
@@ -48,37 +48,14 @@
   const grid = document.getElementById("grid");
   if (!grid) return; // not on the timesheet page
 
-  // ---- Mode toggle (Plan / Actual) ----------------------------------------
-  const STORAGE_KEY = "timetrack.mode";
-
-  function setMode(mode) {
-    grid.classList.remove("mode-plan", "mode-actual");
-    grid.classList.add(mode === "actual" ? "mode-actual" : "mode-plan");
-    document.querySelectorAll(".mode-btn").forEach((b) => {
-      b.classList.toggle("active", b.dataset.mode === mode);
-    });
-    try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) { /* ignore */ }
-    recomputeTotals();
-  }
-
-  document.querySelectorAll(".mode-btn").forEach((b) => {
-    b.addEventListener("click", () => setMode(b.dataset.mode));
-  });
-
-  // ---- Totals -------------------------------------------------------------
-  // The "active" hours input for a cell depends on the current mode: the
-  // planned input in Plan mode, the actual input in Actual mode. Overtime is
-  // never counted in the day total (brief: total excludes overtime).
-  function activeHoursInputs() {
-    const cls = grid.classList.contains("mode-actual")
-      ? "input.hrs.actual-field"
-      : "input.hrs.plan-field";
-    return Array.from(grid.querySelectorAll(cls));
-  }
-
   function val(input) {
     const n = parseFloat(input.value);
     return isNaN(n) ? 0 : n;
+  }
+
+  function fmt(n) {
+    if (!n) return "0";
+    return Number(n).toString();
   }
 
   function colourFor(cell, hours) {
@@ -89,45 +66,53 @@
     else cell.classList.add("total-over");
   }
 
-  function recomputeTotals() {
-    const inputs = activeHoursInputs();
-    const dayTotals = [0, 0, 0, 0, 0];
+  // ---- Totals -------------------------------------------------------------
+  // Planned and actual are both shown (two rows per project), so each gets its
+  // own per-day column totals, per-row week totals, and grand total.
+  function sumColumns(selector, dayTotals) {
     let grand = 0;
-
-    // Per-day column totals.
-    inputs.forEach((inp) => {
+    grid.querySelectorAll(selector).forEach((inp) => {
       const day = parseInt(inp.dataset.day, 10);
       const v = val(inp);
       if (!isNaN(day)) dayTotals[day] += v;
       grand += v;
     });
-    document.querySelectorAll("[data-day-total]").forEach((cell) => {
-      const d = parseInt(cell.dataset.dayTotal, 10);
+    return grand;
+  }
+
+  function paintDayTotals(attr, dayTotals) {
+    grid.querySelectorAll("[data-" + attr + "]").forEach((cell) => {
+      const d = parseInt(cell.getAttribute("data-" + attr), 10);
       const t = dayTotals[d] || 0;
       cell.textContent = fmt(t);
       colourFor(cell, t);
     });
+  }
 
-    // Per-project row totals.
-    grid.querySelectorAll("tbody tr").forEach((tr) => {
-      const cells = tr.querySelectorAll(
-        grid.classList.contains("mode-actual")
-          ? "input.hrs.actual-field"
-          : "input.hrs.plan-field"
-      );
+  function paintRowTotals(rowSelector, inputSelector) {
+    grid.querySelectorAll(rowSelector).forEach((tr) => {
       let rowTotal = 0;
-      cells.forEach((inp) => { rowTotal += val(inp); });
+      tr.querySelectorAll(inputSelector).forEach((inp) => { rowTotal += val(inp); });
       const out = tr.querySelector("[data-row-total]");
       if (out) out.textContent = fmt(rowTotal);
     });
-
-    const grandCell = grid.querySelector("[data-grand-total]");
-    if (grandCell) grandCell.textContent = fmt(grand);
   }
 
-  function fmt(n) {
-    if (!n) return "0";
-    return Number(n).toString();
+  function recomputeTotals() {
+    const planDay = [0, 0, 0, 0, 0];
+    const actDay = [0, 0, 0, 0, 0];
+    const planGrand = sumColumns("input.hrs.plan-field", planDay);
+    const actGrand = sumColumns("input.hrs.actual-field", actDay);
+
+    paintDayTotals("day-total-plan", planDay);
+    paintDayTotals("day-total-actual", actDay);
+    paintRowTotals("tr.plan-row", "input.hrs.plan-field");
+    paintRowTotals("tr.actual-row", "input.hrs.actual-field");
+
+    const pg = grid.querySelector("[data-grand-total-plan]");
+    if (pg) pg.textContent = fmt(planGrand);
+    const ag = grid.querySelector("[data-grand-total-actual]");
+    if (ag) ag.textContent = fmt(actGrand);
   }
 
   // Recompute whenever any hours input changes (typing or htmx-driven).
@@ -136,12 +121,13 @@
   });
 
   // ---- Keyboard navigation between cells ----------------------------------
-  // Arrow keys move focus across the visible hours inputs (current mode).
+  // Arrow keys move focus across all hours inputs in DOM order (plan row, then
+  // actual row, per project). Left/right step one cell; up/down jump a row.
   grid.addEventListener("keydown", (e) => {
     const target = e.target;
     if (!target.matches("input.hrs")) return;
 
-    const inputs = activeHoursInputs();
+    const inputs = Array.from(grid.querySelectorAll("input.hrs"));
     const idx = inputs.indexOf(target);
     if (idx === -1) return;
 
@@ -161,8 +147,5 @@
     }
   });
 
-  // ---- Init ---------------------------------------------------------------
-  let startMode = "plan";
-  try { startMode = localStorage.getItem(STORAGE_KEY) || "plan"; } catch (e) { /* ignore */ }
-  setMode(startMode);
+  recomputeTotals();
 })();

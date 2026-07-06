@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Timesheet — ES TimeTrack{% endblock %}
+{% block title %}Timesheet — Tiny Time Track{% endblock %}
 {% block content %}
 
 {% set week_iso = week_start.isoformat() %}
@@ -34,6 +34,16 @@
   </div>
 {% endif %}
 
+{% if review and (review.comment or review.adjusted_hours is not none) %}
+  <div class="banner review-banner">
+    <strong>Manager feedback on this week's plan</strong>
+    {% if review.adjusted_hours is not none %}
+      — adjusted hours: <strong>{{ hrs(review.adjusted_hours) or '0' }}</strong>
+    {% endif %}
+    {% if review.comment %}<div>{{ review.comment }}</div>{% endif %}
+  </div>
+{% endif %}
+
 <div class="ts-status">
   <span class="chip {{ 'done' if status and status.planned_submitted_at }}">
     Plan: {{ '✓ submitted' if status and status.planned_submitted_at else 'not submitted' }}
@@ -41,19 +51,15 @@
   <span class="chip {{ 'done' if status and status.actuals_submitted_at }}">
     Actuals: {{ '✓ submitted' if status and status.actuals_submitted_at else 'not submitted' }}
   </span>
-
-  <div class="mode-toggle" role="group" aria-label="Edit mode">
-    <button type="button" class="mode-btn" data-mode="plan">Plan</button>
-    <button type="button" class="mode-btn" data-mode="actual">Actual</button>
-  </div>
 </div>
 
 {% if rows %}
-<div id="grid" class="ts mode-plan" data-week="{{ week_iso }}">
+<div id="grid" class="ts" data-week="{{ week_iso }}">
   <table class="grid-table">
     <thead>
       <tr>
         <th class="proj-col">Project</th>
+        <th class="mode-col"></th>
         {% for name in day_names %}
           <th class="day-col">{{ name }}<span class="day-date">{{ day_dates[loop.index0].day }}</span></th>
         {% endfor %}
@@ -63,39 +69,35 @@
     <tbody>
       {% for row in rows %}
         {% set p = row.project %}
-        <tr>
-          <th class="proj-cell" scope="row">
+        {# Two rows per project: planned hours, then actual hours below. #}
+        <tr class="plan-row">
+          <th class="proj-cell" scope="row" rowspan="2">
             {{ p.display_name }}
             {% if not p.billable %}<span class="tag">non-billable</span>{% endif %}
           </th>
+          <td class="mode-label">Plan</td>
           {% for c in row.cells %}
             <td class="cell">
-              {# Plan mode: single planned-hours input #}
               <input class="hrs plan-field" type="number" min="0" max="12" step="0.5"
                      inputmode="decimal" data-day="{{ c.day }}"
                      value="{{ hrs(c.planned) }}" {{ 'disabled' if locked }}
                      hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
                      hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "planned", "week": "{{ week_iso }}"}'
                      aria-label="Planned hours, {{ p.name }}, {{ day_names[c.day] }}">
-
-              {# Actual mode: actual hours + overtime + optional note #}
+            </td>
+          {% endfor %}
+          <td class="row-total" data-row-total>0</td>
+        </tr>
+        <tr class="actual-row">
+          <td class="mode-label">Actual</td>
+          {% for c in row.cells %}
+            <td class="cell">
               <input class="hrs actual-field" type="number" min="0" max="12" step="0.5"
                      inputmode="decimal" data-day="{{ c.day }}"
                      value="{{ hrs(c.actual) }}" {{ 'disabled' if locked }}
                      hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
                      hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "actual", "week": "{{ week_iso }}"}'
                      aria-label="Actual hours, {{ p.name }}, {{ day_names[c.day] }}">
-              <input class="ot actual-field" type="number" min="0" max="16" step="0.5"
-                     inputmode="decimal" placeholder="OT"
-                     value="{{ hrs(c.overtime) }}" {{ 'disabled' if locked }}
-                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
-                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "overtime", "week": "{{ week_iso }}"}'
-                     aria-label="Overtime hours, {{ p.name }}, {{ day_names[c.day] }}">
-              <input class="note actual-field" type="text" maxlength="500" placeholder="note"
-                     value="{{ c.note }}" {{ 'disabled' if locked }}
-                     hx-post="/timesheet/cell" hx-trigger="change" hx-swap="none" name="value"
-                     hx-vals='{"project_id": {{ p.id }}, "day": {{ c.day }}, "field": "note", "week": "{{ week_iso }}"}'
-                     aria-label="Note, {{ p.name }}, {{ day_names[c.day] }}">
             </td>
           {% endfor %}
           <td class="row-total" data-row-total>0</td>
@@ -104,17 +106,25 @@
     </tbody>
     <tfoot>
       <tr>
-        <th class="proj-cell" scope="row">Day total</th>
+        <th class="proj-cell" scope="row" colspan="2">Planned day total</th>
         {% for name in day_names %}
-          <td class="day-total" data-day-total="{{ loop.index0 }}">0</td>
+          <td class="day-total" data-day-total-plan="{{ loop.index0 }}">0</td>
         {% endfor %}
-        <td class="grand-total" data-grand-total>0</td>
+        <td class="grand-total" data-grand-total-plan>0</td>
+      </tr>
+      <tr>
+        <th class="proj-cell" scope="row" colspan="2">Actual day total</th>
+        {% for name in day_names %}
+          <td class="day-total" data-day-total-actual="{{ loop.index0 }}">0</td>
+        {% endfor %}
+        <td class="grand-total" data-grand-total-actual>0</td>
       </tr>
     </tfoot>
   </table>
   <p class="muted small grid-hint">
-    Tip: use arrow keys to move between cells. Half-hour steps (0.5). Overtime (OT) is
-    counted separately from the day total. Entries save automatically.
+    Plan the week up top, then log actual hours in the row below. Arrow keys move
+    between cells; half-hour steps (0.5). Hours over 8 in a day count as overtime.
+    Entries save automatically.
   </p>
 </div>
 {% else %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Home — ES TimeTrack{% endblock %}
+{% block title %}Home — Tiny Time Track{% endblock %}
 {% block content %}
 <h1>Welcome, {{ user.name }}</h1>
 <p class="muted">
@@ -23,6 +23,24 @@
   </a>
   {% endif %}
 </div>
+
+{% if deadlines %}
+<div class="card deadline-card">
+  <h2>Upcoming deadlines</h2>
+  <ul class="deadline-list">
+    {% for d in deadlines %}
+      <li>
+        <span class="deadline-name">{{ d.name }}</span>
+        <span class="deadline-date {{ 'deadline-soon' if (d.due_date - today).days <= 3 }}">
+          {{ d.due_date.strftime('%a %d %b %Y') }}
+          {% set days = (d.due_date - today).days %}
+          {% if days == 0 %}(today!){% elif days == 1 %}(tomorrow){% else %}({{ days }} days){% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
 <p class="muted small">Tip: employees can plan a week and log actuals from the timesheet; managers also get profitability dashboards and settings.</p>
 {% endblock %}

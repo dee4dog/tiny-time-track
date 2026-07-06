@@ -1,9 +1,9 @@
-# ES TimeTrack - Python dependencies (target: Python 3.11+)
+# Tiny Time Track - Python dependencies (target: Python 3.11+)
 # Pinned to known-good releases. Install with:  pip install -r requirements.txt
 
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-SQLAlchemy==2.0.36
+SQLAlchemy>=2.0.43,<2.1      # 2.0.36 breaks on Python 3.14 (typing.Union change)
 pydantic-settings==2.7.1
 Jinja2==3.1.5
 python-multipart==0.0.20      # parsing HTML form POSTs

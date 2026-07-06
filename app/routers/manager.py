@@ -13,6 +13,7 @@ not the pages, and (because the cost math only runs here) not the money data.
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from urllib.parse import quote
@@ -26,7 +27,15 @@ from app import costing, exporting, reminders
 from app.audit import log as audit_log
 from app.database import get_db
 from app.dependencies import require_manager
-from app.models import Employee, Project, ProjectStatus
+from app.models import (
+    Deadline,
+    Employee,
+    PlanReview,
+    Project,
+    ProjectStatus,
+    WeekStatus,
+    _utcnow,
+)
 from app.dashboard_service import (
     compliance_recent,
     people_overview,
@@ -205,12 +214,121 @@ def this_week(
 ):
     week_start, rows = this_week_board(db)
     failures = set(reminders.recent_failures(db))
+    reviews = {
+        r.employee_id: r
+        for r in db.scalars(select(PlanReview).where(PlanReview.week_start == week_start))
+    }
+    deadlines = list(db.scalars(select(Deadline).order_by(Deadline.due_date)))
     return templates.TemplateResponse(
         "manager/this_week.html",
         {"request": request, "user": user, "tab": "this_week",
          "week_start": week_start, "rows": rows, "failures": failures,
+         "reviews": reviews, "deadlines": deadlines, "today": date.today(),
          "msg": msg, "err": err},
     )
+
+
+@router.post("/this-week/review")
+def save_review(
+    employee_id: int = Form(...),
+    week: str = Form(...),
+    comment: str = Form(""),
+    adjusted_hours: str = Form(""),
+    user: Employee = Depends(require_manager),
+    db: Session = Depends(get_db),
+):
+    """Upsert the manager's comment / adjusted hours for one submitted plan."""
+    try:
+        week_start = date.fromisoformat(week)
+    except ValueError:
+        return RedirectResponse("/manager/this-week", status_code=303)
+
+    employee = db.get(Employee, employee_id)
+    status = db.get(WeekStatus, {"employee_id": employee_id, "week_start": week_start})
+    if employee is None or status is None or status.planned_submitted_at is None:
+        # Review only makes sense once the plan is in.
+        return RedirectResponse(
+            "/manager/this-week?err=" + quote("That plan hasn't been submitted yet."),
+            status_code=303,
+        )
+
+    hours: Decimal | None = None
+    raw = adjusted_hours.strip()
+    if raw:
+        try:
+            hours = Decimal(raw)
+            if hours < 0:
+                raise InvalidOperation
+        except InvalidOperation:
+            return RedirectResponse(
+                "/manager/this-week?err=" + quote(f"Invalid adjusted hours: {raw!r}"),
+                status_code=303,
+            )
+
+    review = db.scalar(
+        select(PlanReview).where(
+            PlanReview.employee_id == employee_id, PlanReview.week_start == week_start
+        )
+    )
+    if review is None:
+        review = PlanReview(employee_id=employee_id, week_start=week_start, manager_id=user.id)
+        db.add(review)
+    review.comment = comment.strip()[:1000] or None
+    review.adjusted_hours = hours
+    review.manager_id = user.id
+    review.updated_at = _utcnow()
+
+    audit_log(
+        db, user_id=user.id, action="plan.review",
+        detail=f"{employee.name}, week {week_start}: "
+               f"adjusted_hours={hours if hours is not None else '—'}, "
+               f"comment={'yes' if review.comment else 'no'}",
+    )
+    db.commit()
+    return RedirectResponse(
+        "/manager/this-week?msg=" + quote(f"Review saved for {employee.name}."),
+        status_code=303,
+    )
+
+
+@router.post("/this-week/deadlines")
+def add_deadline(
+    name: str = Form(...),
+    due_date: str = Form(...),
+    user: Employee = Depends(require_manager),
+    db: Session = Depends(get_db),
+):
+    label = name.strip()[:200]
+    try:
+        due = date.fromisoformat(due_date)
+    except ValueError:
+        due = None
+    if not label or due is None:
+        return RedirectResponse(
+            "/manager/this-week?err=" + quote("A deadline needs a name and a date."),
+            status_code=303,
+        )
+    db.add(Deadline(name=label, due_date=due))
+    audit_log(db, user_id=user.id, action="deadline.add", detail=f"{label} ({due})")
+    db.commit()
+    return RedirectResponse(
+        "/manager/this-week?msg=" + quote(f"Deadline added: {label}."), status_code=303
+    )
+
+
+@router.post("/this-week/deadlines/{deadline_id}/delete")
+def delete_deadline(
+    deadline_id: int,
+    user: Employee = Depends(require_manager),
+    db: Session = Depends(get_db),
+):
+    deadline = db.get(Deadline, deadline_id)
+    if deadline is not None:
+        audit_log(db, user_id=user.id, action="deadline.delete",
+                  detail=f"{deadline.name} ({deadline.due_date})")
+        db.delete(deadline)
+        db.commit()
+    return RedirectResponse("/manager/this-week", status_code=303)
 
 
 _XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

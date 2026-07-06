@@ -174,10 +174,6 @@ class TimeEntry(Base):
     actual_hours: Mapped[Decimal] = mapped_column(
         Numeric(4, 1), default=Decimal("0"), nullable=False
     )
-    overtime_hours: Mapped[Decimal] = mapped_column(
-        Numeric(4, 1), default=Decimal("0"), nullable=False
-    )
-    note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
@@ -202,6 +198,41 @@ class WeekStatus(Base):
     actuals_submitted_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
+
+
+class PlanReview(Base):
+    """A manager's feedback on one employee's submitted weekly plan.
+
+    Written from the This-week board once the plan is submitted: a free-text
+    comment and/or an adjusted weekly-hours figure. Informational - it does
+    not rewrite the employee's entries - and shown on their timesheet.
+    """
+
+    __tablename__ = "plan_reviews"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(
+        ForeignKey("employees.id"), nullable=False, index=True
+    )
+    week_start: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    manager_id: Mapped[int] = mapped_column(ForeignKey("employees.id"), nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    adjusted_hours: Mapped[Decimal | None] = mapped_column(Numeric(5, 1), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("employee_id", "week_start", name="uq_plan_review"),
+    )
+
+
+class Deadline(Base):
+    """A named office deadline set by a manager, shown to all staff."""
+
+    __tablename__ = "deadlines"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
 
 class Setting(Base):

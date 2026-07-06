@@ -10,8 +10,21 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+STATIC_DIR = Path(__file__).parent / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def asset_ver(rel_path: str) -> str:
+    """Cache-busting token for a static asset: its last-modified time.
+
+    Used in template asset URLs (``app.css?v=...``) so an edited stylesheet or
+    script is picked up immediately instead of being served stale from cache.
+    """
+    try:
+        return str(int((STATIC_DIR / rel_path).stat().st_mtime))
+    except OSError:
+        return "1"
 
 
 def format_money(amount, symbol: str = "R") -> str:
@@ -85,3 +98,4 @@ templates.env.globals["money"] = format_money
 templates.env.globals["hrs"] = format_hours
 templates.env.globals["pct"] = format_pct
 templates.env.globals["sparkline"] = sparkline
+templates.env.globals["asset_ver"] = asset_ver

@@ -1,12 +1,12 @@
 {% extends "manager/layout.html" %}
-{% block title %}Projects — ES TimeTrack{% endblock %}
+{% block title %}Projects — Tiny Time Track{% endblock %}
 {% block manager_content %}
 
 <div class="section-head">
   <p class="muted small">
-    Cost-to-date uses each person's salary in effect that week (rate history),
-    overtime weighted by the overtime factor. Click a column header to sort;
-    click a project for detail.
+    Cost-to-date uses each person's salary in effect that week (rate history);
+    hours over 8/day are costed at the overtime factor. Click a column header to
+    sort; click a project for detail.
   </p>
   <a class="btn ghost" href="/manager/export/projects.xlsx">Export to Excel</a>
 </div>

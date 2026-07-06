@@ -36,10 +36,22 @@ class Base(DeclarativeBase):
 
 
 @event.listens_for(Engine, "connect")
-def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
-    """Turn on FK enforcement for each SQLite connection."""
+def _configure_sqlite(dbapi_connection, _connection_record) -> None:
+    """Per-connection SQLite setup: FK enforcement and performance pragmas.
+
+    * foreign_keys: SQLite ignores FK constraints unless switched on.
+    * journal_mode=WAL: readers no longer block while a write is in flight -
+      noticeably smoother with several staff saving cells at once. Persistent,
+      but cheap to set every time.
+    * synchronous=NORMAL: safe with WAL (durable at checkpoint), roughly
+      halves write latency versus FULL.
+    * busy_timeout: wait briefly for a lock instead of failing immediately.
+    """
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 

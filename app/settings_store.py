@@ -17,7 +17,7 @@ from app.models import Setting
 DEFAULTS: dict[str, str] = {
     # Globals
     "overhead_multiplier": "1.6",   # salary -> cost-to-company factor
-    "overtime_factor": "1.5",       # BCEA convention; manager may set 1.0
+    "overtime_factor": "1.5",       # >8h/day costs this much; set 1.0 to disable
     "available_hours_default": "1760",
     "currency_symbol": "R",
     "company_name": "ES",

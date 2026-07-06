@@ -25,14 +25,11 @@ from app.weeks import week_days
 # actuals (managers can still unlock by clearing the stamp).
 LOCK_AFTER_DAYS = 7
 
-# Allowed value ranges (hours). Planned/actual cap at a long-but-sane day;
-# overtime is a typed value that may exceed a normal 8-hour day.
+# Allowed value ranges (hours). Planned/actual cap at a long-but-sane day.
 HOURS_MIN = Decimal("0")
 HOURS_MAX = Decimal("12")
-OVERTIME_MAX = Decimal("16")
 
-VALID_FIELDS = {"planned", "actual", "overtime", "note"}
-NOTE_MAX_LEN = 500
+VALID_FIELDS = {"planned", "actual"}
 
 
 def clean_hours(raw: str | float | None, *, maximum: Decimal) -> Decimal:
@@ -118,8 +115,6 @@ def build_grid(db: Session, employee: Employee, week_start: date) -> list[dict]:
                     "date": day_date,
                     "planned": entry.planned_hours if entry else Decimal("0"),
                     "actual": entry.actual_hours if entry else Decimal("0"),
-                    "overtime": entry.overtime_hours if entry else Decimal("0"),
-                    "note": (entry.note if entry and entry.note else ""),
                 }
             )
         rows.append({"project": project, "cells": cells})
@@ -176,12 +171,7 @@ def save_cell(
 
     entry = _get_or_create_entry(db, employee, project_id, week_start, day)
 
-    if field == "note":
-        text = (value or "").strip()[:NOTE_MAX_LEN]
-        entry.note = text or None
-    elif field == "overtime":
-        entry.overtime_hours = clean_hours(value, maximum=OVERTIME_MAX)
-    elif field == "planned":
+    if field == "planned":
         entry.planned_hours = clean_hours(value, maximum=HOURS_MAX)
     elif field == "actual":
         entry.actual_hours = clean_hours(value, maximum=HOURS_MAX)

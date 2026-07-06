@@ -1,5 +1,5 @@
 {% extends "manager/layout.html" %}
-{% block title %}This week — ES TimeTrack{% endblock %}
+{% block title %}This week — Tiny Time Track{% endblock %}
 {% block manager_content %}
 
 <h2>Week of {{ week_start.strftime('%d %b %Y') }}</h2>
@@ -16,10 +16,14 @@
 
 <table class="data-table">
   <thead>
-    <tr><th>Employee</th><th>Plan</th><th>Actuals</th><th>Send reminder</th></tr>
+    <tr>
+      <th>Employee</th><th>Plan</th><th>Actuals</th><th>Send reminder</th>
+      <th class="review-col">Plan review (comment / adjusted hrs)</th>
+    </tr>
   </thead>
   <tbody>
     {% for r in rows %}
+      {% set review = reviews.get(r.employee.id) %}
       <tr class="{{ 'row-warn' if r.employee.email in failures }}">
         <td>{{ r.employee.name }}</td>
         <td>{% if r.plan %}<span class="pill ok">✓ submitted</span>{% else %}<span class="pill miss">— missing</span>{% endif %}</td>
@@ -41,8 +45,62 @@
           {% endif %}
           {% if r.plan and r.actuals %}<span class="muted small">—</span>{% endif %}
         </td>
+        <td>
+          {% if r.plan %}
+            <form method="post" action="/manager/this-week/review" class="review-form">
+              <input type="hidden" name="employee_id" value="{{ r.employee.id }}">
+              <input type="hidden" name="week" value="{{ week_start.isoformat() }}">
+              <input type="text" name="comment" maxlength="1000" placeholder="Comment on the plan…"
+                     value="{{ review.comment if review and review.comment else '' }}">
+              <input type="number" name="adjusted_hours" min="0" step="0.5" placeholder="Adj. hrs"
+                     class="adj-hrs" value="{{ hrs(review.adjusted_hours) if review else '' }}"
+                     title="Adjusted weekly hours">
+              <button class="btn ghost small-btn" type="submit">Save</button>
+            </form>
+          {% else %}
+            <span class="muted small">available after plan is submitted</span>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<div class="card form-card">
+  <h2>Deadlines</h2>
+  <p class="muted small">Named office deadlines shown on every staff member's home page.</p>
+
+  {% if deadlines %}
+  <table class="data-table">
+    <thead><tr><th>Deadline</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for d in deadlines %}
+        <tr class="{{ 'row-warn' if d.due_date < today }}">
+          <td>{{ d.name }}</td>
+          <td class="nowrap">{{ d.due_date.strftime('%d %b %Y') }}
+            {% if d.due_date < today %}<span class="pill miss">past</span>{% endif %}</td>
+          <td>
+            <form method="post" action="/manager/this-week/deadlines/{{ d.id }}/delete"
+                  onsubmit="return confirm('Remove deadline {{ d.name }}?')">
+              <button class="btn ghost small-btn" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">No deadlines yet.</p>
+  {% endif %}
+
+  <form method="post" action="/manager/this-week/deadlines" class="inline-form">
+    <label>Deadline name
+      <input type="text" name="name" maxlength="200" required placeholder="e.g. Longlands concept issue">
+    </label>
+    <label>Date
+      <input type="date" name="due_date" required>
+    </label>
+    <button class="btn primary" type="submit">Add deadline</button>
+  </form>
+</div>
 {% endblock %}

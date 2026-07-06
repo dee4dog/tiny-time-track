@@ -1,6 +1,6 @@
 <img width="1836" height="481" alt="image (1)" src="https://github.com/user-attachments/assets/7ad0240d-113d-486c-9f5b-87b44cf89f4b" />
 
-# TimeTrack
+# Tiny Time Track
 
 Self-hosted office time tracking and project profitability for the BI as part of AIBI.
 Runs entirely on a local Windows server — no cloud dependencies.
@@ -9,7 +9,7 @@ Runs entirely on a local Windows server — no cloud dependencies.
 > **Phase 1 (Foundation):** database schema, login & role enforcement, settings
 > storage, admin CLI, config.
 > **Phase 2 (Employee timesheet):** Excel-style Mon–Fri grid with Plan/Actual
-> mode toggle, per-cell autosave, overtime & notes, live day-total colour
+> mode toggle, per-cell autosave, live day-total colour
 > coding (green = 8h, amber < 8, red > 8), keyboard navigation, submit
 > plan/actuals, copy-last-week, and add-project.
 > **Phase 3 (Manager dashboard):** projects profitability table (fee / hours /
@@ -17,8 +17,8 @@ Runs entirely on a local Windows server — no cloud dependencies.
 > and planned-vs-actual charts (Chart.js bundled locally) and an audited fee
 > editor, People view (capacity / utilisation / 6-week compliance), a
 > confirmation-gated Rates table, and a This-week submission board. Cost uses
-> each person's salary in effect that week (rate history) with overtime
-> weighting.
+> each person's salary in effect that week (rate history); hours over 8/day are
+> treated as overtime and costed at the overtime factor.
 > **Phase 4 (Settings):** manager-only settings — employee add/edit/deactivate
 > (salary changes write rate_history + audit), assigned-project management,
 > password reset; project add/edit/archive; global settings (overhead, overtime
@@ -76,8 +76,8 @@ Open <http://localhost:8000> and sign in. On the LAN, other staff use
 
 | Role     | Email              | Password      |
 | -------- | ------------------ | ------------- |
-| Manager  | `manager@es.local` | `changeme123` |
-| Employee | `anel@es.local`    | `changeme123` |
+| Manager  | `manager@tiny.local` | `changeme123` |
+| Employee | `anel@tiny.local`    | `changeme123` |
 
 **Delete or change these before real use.**
 
@@ -166,24 +166,24 @@ The app must keep running and restart on reboot. Two documented options:
 ```powershell
 # 1. Download nssm and put nssm.exe somewhere on PATH.
 # 2. Install the service (run PowerShell as Administrator):
-nssm install ESTimeTrack "C:\Claud dev\timetrack\.venv\Scripts\python.exe" "-m" "app"
-nssm set ESTimeTrack AppDirectory "C:\Claud dev\timetrack"
-nssm set ESTimeTrack Start SERVICE_AUTO_START
-nssm set ESTimeTrack AppStdout "C:\Claud dev\timetrack\logs\service.log"
-nssm set ESTimeTrack AppStderr "C:\Claud dev\timetrack\logs\service.log"
+nssm install "Tiny Time Track" "C:\Claud dev\timetrack\.venv\Scripts\python.exe" "-m" "app"
+nssm set "Tiny Time Track" AppDirectory "C:\Claud dev\timetrack"
+nssm set "Tiny Time Track" Start SERVICE_AUTO_START
+nssm set "Tiny Time Track" AppStdout "C:\Claud dev\timetrack\logs\service.log"
+nssm set "Tiny Time Track" AppStderr "C:\Claud dev\timetrack\logs\service.log"
 
 # 3. Start it
-nssm start ESTimeTrack
+nssm start "Tiny Time Track"
 ```
 
-Manage with `nssm restart ESTimeTrack`, `nssm stop ESTimeTrack`, or the
+Manage with `nssm restart "Tiny Time Track"`, `nssm stop "Tiny Time Track"`, or the
 Services snap-in (`services.msc`). On reboot it starts automatically, and the
 APScheduler reminders + nightly backup come back with it.
 
 ### Option B — Task Scheduler (no extra software)
 
 1. Open **Task Scheduler → Create Task**.
-2. **General:** name `ESTimeTrack`; "Run whether user is logged on or not";
+2. **General:** name `Tiny Time Track`; "Run whether user is logged on or not";
    "Run with highest privileges".
 3. **Triggers:** New → "At startup".
 4. **Actions:** New → Start a program:
@@ -199,6 +199,6 @@ To verify after a reboot, browse to `http://<server>:8000` from another PC.
 Allow inbound TCP 8000 on the office LAN so staff can reach the server:
 
 ```powershell
-New-NetFirewallRule -DisplayName "ES TimeTrack 8000" -Direction Inbound `
+New-NetFirewallRule -DisplayName "Tiny Time Track 8000" -Direction Inbound `
   -Protocol TCP -LocalPort 8000 -Action Allow -Profile Domain,Private
 ```

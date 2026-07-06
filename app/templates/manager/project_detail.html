@@ -1,5 +1,5 @@
 {% extends "manager/layout.html" %}
-{% block title %}{{ project.name }} — ES TimeTrack{% endblock %}
+{% block title %}{{ project.name }} — Tiny Time Track{% endblock %}
 {% block manager_content %}
 
 <p><a href="/manager">&larr; All projects</a></p>
@@ -72,5 +72,5 @@
 
 {% block head_extra %}
   <script src="/static/js/chart.min.js" defer></script>
-  <script src="/static/js/charts.js" defer></script>
+  <script src="/static/js/charts.js?v={{ asset_ver('js/charts.js') }}" defer></script>
 {% endblock %}
