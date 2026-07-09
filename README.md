@@ -202,3 +202,7 @@ Allow inbound TCP 8000 on the office LAN so staff can reach the server:
 New-NetFirewallRule -DisplayName "Tiny Time Track 8000" -Direction Inbound `
   -Protocol TCP -LocalPort 8000 -Action Allow -Profile Domain,Private
 ```
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Dirk Cilliers.
