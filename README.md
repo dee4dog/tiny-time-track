@@ -205,4 +205,6 @@ New-NetFirewallRule -DisplayName "Tiny Time Track 8000" -Direction Inbound `
 
 ## License
 
-Released under the [MIT License](LICENSE) — © 2026 Dirk Cilliers.
+Proprietary — **All Rights Reserved**. © 2026 Dirk Cilliers. See [LICENSE](LICENSE).
+This software may not be used, copied, modified, or distributed without prior
+written permission.
