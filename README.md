@@ -2,7 +2,7 @@
 
 # Tiny Time Track
 
-Self-hosted office time tracking and project profitability for the BI as part of AIBI.
+Self-hosted office time tracking and project profitability for the BI as part of AIBe.
 Runs entirely on a local Windows server — no cloud dependencies.
 
 > **Build status:** Complete — all six phases built and verified.
