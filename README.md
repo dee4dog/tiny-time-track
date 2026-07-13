@@ -1,4 +1,4 @@
-<img width="1836" height="481" alt="image (1)" src="https://github.com/user-attachments/assets/7ad0240d-113d-486c-9f5b-87b44cf89f4b" />
+<img width="1774" height="887" alt="ChatGPT Image Jul 13, 2026, 10_46_00 PM" src="https://github.com/user-attachments/assets/4b11f755-4bea-47c8-8ea0-2c032626cfd7" />
 
 # Tiny Time Track
 
