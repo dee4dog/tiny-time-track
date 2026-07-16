@@ -18,7 +18,9 @@
   const danger = v("--danger", "#c0563e");
   const amber = v("--amber", "#cf9a4e");
   const accentFill = v("--accent-soft", "rgba(194,103,74,0.12)");
-  const grid = "rgba(120,72,52,0.08)";
+  const grid = v("--chart-grid", "rgba(120,72,52,0.08)");
+  const muted = v("--muted", "");
+  if (muted) Chart.defaults.color = muted;
 
   const moneyTicks = {
     callback: (v) => "R " + Number(v).toLocaleString("en-ZA").replace(/,/g, " "),

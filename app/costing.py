@@ -175,16 +175,39 @@ class ProjectSummary:
         return (self.fee - self.cost) / self.fee
 
 
+# Only the columns the aggregations below need. Selecting plain tuples skips
+# ORM object hydration, which dominates the cost once entries number in the
+# thousands.
+_ENTRY_COLS = (
+    TimeEntry.employee_id,
+    TimeEntry.week_start,
+    TimeEntry.day,
+    TimeEntry.planned_hours,
+    TimeEntry.actual_hours,
+)
+
+
 def summarise_project(
-    db: Session, project: Project, *, resolver: RateResolver | None = None
+    db: Session,
+    project: Project,
+    *,
+    resolver: RateResolver | None = None,
+    entries: list | None = None,
 ) -> ProjectSummary:
-    """Full cost breakdown for one project (employee split + weekly series)."""
+    """Full cost breakdown for one project (employee split + weekly series).
+
+    ``entries`` lets a caller that already fetched this project's entry rows
+    (see ``summarise_all_projects``) skip the per-project query.
+    """
     resolver = resolver or RateResolver(db)
     overtime_factor = resolver.overtime_factor
     summary = ProjectSummary(project=project)
 
-    stmt = select(TimeEntry).where(TimeEntry.project_id == project.id)
-    for e in db.scalars(stmt):
+    if entries is None:
+        entries = db.execute(
+            select(*_ENTRY_COLS).where(TimeEntry.project_id == project.id)
+        ).all()
+    for e in entries:
         worked = e.actual_hours or ZERO
         overtime = overtime_for_entry(
             worked, resolver.day_total(e.employee_id, e.week_start, e.day)
@@ -220,9 +243,23 @@ def summarise_project(
 def summarise_all_projects(
     db: Session, projects: list[Project]
 ) -> list[ProjectSummary]:
-    """Summaries for many projects, sharing one rate resolver."""
+    """Summaries for many projects, sharing one rate resolver.
+
+    Fetches every project's entries in a single query (instead of one query
+    per project) and buckets them in Python.
+    """
     resolver = RateResolver(db)
-    return [summarise_project(db, p, resolver=resolver) for p in projects]
+    by_project: dict[int, list] = {p.id: [] for p in projects}
+    if by_project:
+        stmt = select(TimeEntry.project_id, *_ENTRY_COLS).where(
+            TimeEntry.project_id.in_(by_project)
+        )
+        for row in db.execute(stmt):
+            by_project[row.project_id].append(row)
+    return [
+        summarise_project(db, p, resolver=resolver, entries=by_project[p.id])
+        for p in projects
+    ]
 
 
 def last_n_week_costs(summary: ProjectSummary, n: int = 4) -> list[Decimal]:

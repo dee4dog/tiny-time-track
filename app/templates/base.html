@@ -15,11 +15,12 @@
   {% if user %}
   <header class="topbar">
     <a class="brand" href="/">Tiny Time Track</a>
+    {% set path = request.url.path %}
     <nav>
-      <a href="/timesheet">Timesheet</a>
+      <a href="/timesheet" {% if path.startswith('/timesheet') %}class="active" aria-current="page"{% endif %}>Timesheet</a>
       {% if user.role.value == 'manager' %}
-        <a href="/manager">Dashboard</a>
-        <a href="/settings">Settings</a>
+        <a href="/manager" {% if path.startswith('/manager') %}class="active" aria-current="page"{% endif %}>Dashboard</a>
+        <a href="/settings" {% if path.startswith('/settings') %}class="active" aria-current="page"{% endif %}>Settings</a>
       {% endif %}
     </nav>
     <form class="logout" action="/logout" method="post">

@@ -54,7 +54,7 @@
 </div>
 
 {% if rows %}
-<div id="grid" class="ts" data-week="{{ week_iso }}">
+<div id="grid" class="ts" data-week="{{ week_iso }}" data-day-hours="8">
   <table class="grid-table">
     <thead>
       <tr>
@@ -86,7 +86,7 @@
                      aria-label="Planned hours, {{ p.name }}, {{ day_names[c.day] }}">
             </td>
           {% endfor %}
-          <td class="row-total" data-row-total>0</td>
+          <td class="row-total" data-row-total>{{ hrs(row.plan_total) or '0' }}</td>
         </tr>
         <tr class="actual-row">
           <td class="mode-label">Actual</td>
@@ -100,7 +100,7 @@
                      aria-label="Actual hours, {{ p.name }}, {{ day_names[c.day] }}">
             </td>
           {% endfor %}
-          <td class="row-total" data-row-total>0</td>
+          <td class="row-total" data-row-total>{{ hrs(row.actual_total) or '0' }}</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -108,23 +108,23 @@
       <tr>
         <th class="proj-cell" scope="row" colspan="2">Planned day total</th>
         {% for name in day_names %}
-          <td class="day-total" data-day-total-plan="{{ loop.index0 }}">0</td>
+          <td class="day-total" data-day-total-plan="{{ loop.index0 }}">{{ hrs(totals.day_plan[loop.index0]) or '0' }}</td>
         {% endfor %}
-        <td class="grand-total" data-grand-total-plan>0</td>
+        <td class="grand-total" data-grand-total-plan>{{ hrs(totals.grand_plan) or '0' }}</td>
       </tr>
       <tr>
         <th class="proj-cell" scope="row" colspan="2">Actual day total</th>
         {% for name in day_names %}
-          <td class="day-total" data-day-total-actual="{{ loop.index0 }}">0</td>
+          <td class="day-total" data-day-total-actual="{{ loop.index0 }}">{{ hrs(totals.day_actual[loop.index0]) or '0' }}</td>
         {% endfor %}
-        <td class="grand-total" data-grand-total-actual>0</td>
+        <td class="grand-total" data-grand-total-actual>{{ hrs(totals.grand_actual) or '0' }}</td>
       </tr>
     </tfoot>
   </table>
   <p class="muted small grid-hint">
-    Plan the week up top, then log actual hours in the row below. Arrow keys move
-    between cells; half-hour steps (0.5). Hours over 8 in a day count as overtime.
-    Entries save automatically.
+    Plan the week up top, then log actual hours in the row below. Enter moves down
+    a cell, Ctrl+arrows move around; plain ↑/↓ adjust the value. Half-hour steps
+    (0.5). Hours over 8 in a day count as overtime. Entries save automatically.
   </p>
 </div>
 {% else %}

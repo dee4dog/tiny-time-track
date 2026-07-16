@@ -157,7 +157,7 @@ def people(
     db: Session = Depends(get_db),
 ):
     stats = people_overview(db)
-    compliance = {s.employee.id: compliance_recent(db, s.employee, weeks=6) for s in stats}
+    compliance = compliance_recent(db, [s.employee for s in stats], weeks=6)
     return templates.TemplateResponse(
         "manager/people.html",
         {"request": request, "user": user, "tab": "people", "stats": stats, "compliance": compliance},

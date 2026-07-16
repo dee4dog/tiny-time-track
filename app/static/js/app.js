@@ -1,8 +1,22 @@
 // Tiny Time Track — front-end behaviour.
-//   * Timesheet grid: Plan/Actual toggle, live coloured totals, arrow-key nav.
+//   * Timesheet grid: live coloured totals, keyboard nav, autosave feedback
+//     (saved flash / failure toast, server-cleaned values).
 //   * Manager tables: click-to-sort columns.
 // Persistence on the grid is handled by htmx (each input posts on change).
 "use strict";
+
+// ---- One-shot banners: drop ?saved=/&msg=/&err= from the URL after render --
+// so a refresh doesn't re-show a stale "saved" message.
+(function () {
+  const url = new URL(window.location.href);
+  let changed = false;
+  ["saved", "msg", "err"].forEach((k) => {
+    if (url.searchParams.has(k)) { url.searchParams.delete(k); changed = true; }
+  });
+  if (changed && window.history.replaceState) {
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }
+})();
 
 // ---- Sortable tables (manager projects view) ------------------------------
 (function () {
@@ -48,6 +62,9 @@
   const grid = document.getElementById("grid");
   if (!grid) return; // not on the timesheet page
 
+  // Hours in a standard day; drives the under/over colouring of totals.
+  const DAY_HOURS = parseFloat(grid.dataset.dayHours) || 8;
+
   function val(input) {
     const n = parseFloat(input.value);
     return isNaN(n) ? 0 : n;
@@ -61,8 +78,8 @@
   function colourFor(cell, hours) {
     cell.classList.remove("total-ok", "total-under", "total-over");
     if (hours === 0) return;            // leave neutral when empty
-    if (hours === 8) cell.classList.add("total-ok");
-    else if (hours < 8) cell.classList.add("total-under");
+    if (hours === DAY_HOURS) cell.classList.add("total-ok");
+    else if (hours < DAY_HOURS) cell.classList.add("total-under");
     else cell.classList.add("total-over");
   }
 
@@ -120,9 +137,72 @@
     if (e.target.matches("input.hrs")) recomputeTotals();
   });
 
+  // ---- Autosave feedback ---------------------------------------------------
+  // Success: the server replies with the value it actually stored (rounded to
+  // 0.5, clamped to the allowed range). Reflect that back into the input so
+  // the grid always shows what will be on the record, and flash the cell.
+  // Failure: keep a toast up until the next successful save.
+  let toast = null;
+
+  function showSaveError(message) {
+    hideSaveError();
+    toast = document.createElement("div");
+    toast.className = "save-toast";
+    toast.setAttribute("role", "alert");
+    const text = document.createElement("span");
+    text.textContent = message;
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.textContent = "Dismiss";
+    dismiss.addEventListener("click", hideSaveError);
+    toast.append(text, dismiss);
+    document.body.appendChild(toast);
+  }
+
+  function hideSaveError() {
+    if (toast) { toast.remove(); toast = null; }
+  }
+
+  document.body.addEventListener("htmx:afterRequest", (e) => {
+    const input = e.detail.elt;
+    if (!(input instanceof HTMLInputElement) || !input.closest("#grid")) return;
+    if (!e.detail.successful) return;
+
+    hideSaveError();
+
+    // Only sync if the user hasn't typed something newer since this request
+    // was sent (rapid edits queue separate requests).
+    const params = e.detail.requestConfig && e.detail.requestConfig.parameters;
+    const sent = params ? String(params.value != null ? params.value : "") : null;
+    const stored = e.detail.xhr ? e.detail.xhr.responseText : null;
+    if (stored !== null && sent !== null && input.value === sent && input.value !== stored) {
+      input.value = stored;
+      recomputeTotals();
+    }
+
+    input.classList.add("saved-flash");
+    setTimeout(() => input.classList.remove("saved-flash"), 900);
+  });
+
+  document.body.addEventListener("htmx:responseError", (e) => {
+    const input = e.detail.elt;
+    if (!(input instanceof HTMLInputElement) || !input.closest("#grid")) return;
+    const status = e.detail.xhr ? e.detail.xhr.status : 0;
+    showSaveError(status === 423
+      ? "This week is locked — your change was NOT saved."
+      : "Change not saved (error " + status + "). Please re-enter the value.");
+  });
+
+  document.body.addEventListener("htmx:sendError", (e) => {
+    const input = e.detail.elt;
+    if (!(input instanceof HTMLInputElement) || !input.closest("#grid")) return;
+    showSaveError("Change not saved — connection problem. It will NOT retry automatically.");
+  });
+
   // ---- Keyboard navigation between cells ----------------------------------
-  // Arrow keys move focus across all hours inputs in DOM order (plan row, then
-  // actual row, per project). Left/right step one cell; up/down jump a row.
+  // Enter moves down (Excel-style); Ctrl/Cmd+Arrows move in any direction.
+  // Plain Up/Down are left alone so they step the number value natively.
+  // Inputs run in DOM order: plan row, then actual row, per project (5 cols).
   grid.addEventListener("keydown", (e) => {
     const target = e.target;
     if (!target.matches("input.hrs")) return;
@@ -133,12 +213,18 @@
 
     const cols = 5; // Mon..Fri
     let next = -1;
-    switch (e.key) {
-      case "ArrowRight": next = idx + 1; break;
-      case "ArrowLeft":  next = idx - 1; break;
-      case "ArrowDown":  next = idx + cols; break;
-      case "ArrowUp":    next = idx - cols; break;
-      default: return;
+    if (e.key === "Enter") {
+      next = idx + cols;
+    } else if (e.ctrlKey || e.metaKey) {
+      switch (e.key) {
+        case "ArrowRight": next = idx + 1; break;
+        case "ArrowLeft":  next = idx - 1; break;
+        case "ArrowDown":  next = idx + cols; break;
+        case "ArrowUp":    next = idx - cols; break;
+        default: return;
+      }
+    } else {
+      return;
     }
     if (next >= 0 && next < inputs.length) {
       e.preventDefault();
@@ -146,6 +232,14 @@
       inputs[next].select();
     }
   });
+
+  // Scrolling over a focused number input silently changes its value in some
+  // browsers — blur instead so a scroll can never corrupt an entry.
+  grid.addEventListener("wheel", (e) => {
+    if (e.target.matches('input[type="number"]') && document.activeElement === e.target) {
+      e.target.blur();
+    }
+  }, { passive: true });
 
   recomputeTotals();
 })();

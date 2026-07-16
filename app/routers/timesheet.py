@@ -42,7 +42,7 @@ def timesheet(
     db: Session = Depends(get_db),
 ):
     week_start = parse_week(week)
-    rows = ts.build_grid(db, user, week_start)
+    rows, totals = ts.build_grid(db, user, week_start)
     status = ts.get_week_status(db, user, week_start)
     locked = ts.is_locked(db, user, week_start)
     review = db.scalar(
@@ -63,6 +63,7 @@ def timesheet(
             "day_names": DAY_NAMES,
             "day_dates": week_days(week_start),
             "rows": rows,
+            "totals": totals,
             "status": status,
             "locked": locked,
             "review": review,
@@ -90,7 +91,7 @@ def save_cell(
         return Response("locked", status_code=423)  # 423 Locked
 
     try:
-        ts.save_cell(
+        stored = ts.save_cell(
             db, user,
             project_id=project_id, week_start=week_start,
             day=day, field=field, value=value,
@@ -98,7 +99,10 @@ def save_cell(
     except ValueError as exc:
         return Response(str(exc), status_code=400)
 
-    return Response(status_code=204)  # success, nothing to swap
+    # Body carries the value actually stored (rounded/clamped) so the client
+    # can sync the input to it. hx-swap="none" means htmx won't swap it into
+    # the DOM; app.js reads it from the response instead.
+    return Response(stored, media_type="text/plain")
 
 
 @router.post("/submit")

@@ -11,6 +11,7 @@
   <a class="btn ghost" href="/manager/export/projects.xlsx">Export to Excel</a>
 </div>
 
+<div class="table-scroll">
 <table class="data-table sortable" id="projects-table">
   <thead>
     <tr>
@@ -28,7 +29,7 @@
       {% set s = row.summary %}
       <tr onclick="window.location='/manager/projects/{{ s.project.id }}'">
         <td>
-          {{ s.project.display_name }}
+          <a class="row-link" href="/manager/projects/{{ s.project.id }}">{{ s.project.display_name }}</a>
           {% if not s.billable %}<span class="tag">non-billable</span>{% endif %}
         </td>
         <td class="num" data-sort-value="{{ s.fee }}">
@@ -60,6 +61,7 @@
     </tr>
   </tfoot>
 </table>
+</div>
 
 {% if not rows %}
   <p class="muted">No active projects yet.</p>

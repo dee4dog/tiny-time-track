@@ -98,27 +98,58 @@ def entries_for_week(
     return {(e.project_id, e.day): e for e in db.scalars(stmt)}
 
 
-def build_grid(db: Session, employee: Employee, week_start: date) -> list[dict]:
-    """Rows for the template: one per assigned project, each with five day cells."""
+def build_grid(
+    db: Session, employee: Employee, week_start: date
+) -> tuple[list[dict], dict]:
+    """Rows for the template plus initial totals (plan and actual).
+
+    Totals are server-rendered so the page shows correct numbers before the
+    script runs; the script recomputes them on load and on every edit.
+    """
     projects = assigned_projects(db, employee)
     existing = entries_for_week(db, employee, week_start)
     days = week_days(week_start)
 
+    zero = Decimal("0")
+    day_plan = [zero] * len(days)
+    day_actual = [zero] * len(days)
     rows: list[dict] = []
     for project in projects:
         cells = []
+        plan_total = zero
+        actual_total = zero
         for i, day_date in enumerate(days):
             entry = existing.get((project.id, i))
+            planned = entry.planned_hours if entry else zero
+            actual = entry.actual_hours if entry else zero
+            plan_total += planned or zero
+            actual_total += actual or zero
+            day_plan[i] += planned or zero
+            day_actual[i] += actual or zero
             cells.append(
                 {
                     "day": i,
                     "date": day_date,
-                    "planned": entry.planned_hours if entry else Decimal("0"),
-                    "actual": entry.actual_hours if entry else Decimal("0"),
+                    "planned": planned,
+                    "actual": actual,
                 }
             )
-        rows.append({"project": project, "cells": cells})
-    return rows
+        rows.append(
+            {
+                "project": project,
+                "cells": cells,
+                "plan_total": plan_total,
+                "actual_total": actual_total,
+            }
+        )
+
+    totals = {
+        "day_plan": day_plan,
+        "day_actual": day_actual,
+        "grand_plan": sum(day_plan, zero),
+        "grand_actual": sum(day_actual, zero),
+    }
+    return rows, totals
 
 
 def _get_or_create_entry(
@@ -152,11 +183,13 @@ def save_cell(
     day: int,
     field: str,
     value: str,
-) -> None:
+) -> str:
     """Upsert a single field of one (project, day) cell.
 
-    Raises ValueError on invalid input or a project the employee isn't
-    assigned to. The caller turns that into an HTTP error.
+    Returns the value actually stored (after rounding/clamping), formatted
+    the way the grid renders it, so the client can reflect it back into the
+    input. Raises ValueError on invalid input or a project the employee
+    isn't assigned to. The caller turns that into an HTTP error.
     """
     if field not in VALID_FIELDS:
         raise ValueError(f"Unknown field {field!r}")
@@ -164,19 +197,24 @@ def save_cell(
         raise ValueError("day out of range")
 
     # The project must be on this employee's grid (prevents logging time to
-    # arbitrary projects via a crafted request).
-    assigned_ids = {p.id for p in assigned_projects(db, employee)}
-    if project_id not in assigned_ids:
+    # arbitrary projects via a crafted request). A primary-key get on the
+    # join table beats loading the whole project list on every autosave.
+    if db.get(
+        EmployeeProject, {"employee_id": employee.id, "project_id": project_id}
+    ) is None:
         raise ValueError("project not assigned to this employee")
 
     entry = _get_or_create_entry(db, employee, project_id, week_start, day)
 
+    hours = clean_hours(value, maximum=HOURS_MAX)
     if field == "planned":
-        entry.planned_hours = clean_hours(value, maximum=HOURS_MAX)
+        entry.planned_hours = hours
     elif field == "actual":
-        entry.actual_hours = clean_hours(value, maximum=HOURS_MAX)
+        entry.actual_hours = hours
 
     db.commit()
+    # Same formatting the template uses: blank for zero, trimmed otherwise.
+    return f"{float(hours):g}" if hours else ""
 
 
 def copy_last_week_plan(
@@ -193,14 +231,25 @@ def copy_last_week_plan(
         return 0
 
     assigned_ids = {p.id for p in assigned_projects(db, employee)}
+    # One query for the target week instead of a lookup per copied cell.
+    current = entries_for_week(db, employee, week_start=week_start)
     filled = 0
     for (project_id, day), prev_entry in prev.items():
         if project_id not in assigned_ids:
             continue
         if prev_entry.planned_hours <= 0:
             continue
-        entry = _get_or_create_entry(db, employee, project_id, week_start, day)
-        if entry.planned_hours and entry.planned_hours > 0:
+        entry = current.get((project_id, day))
+        if entry is None:
+            entry = TimeEntry(
+                employee_id=employee.id,
+                project_id=project_id,
+                week_start=week_start,
+                day=day,
+            )
+            db.add(entry)
+            current[(project_id, day)] = entry
+        elif entry.planned_hours and entry.planned_hours > 0:
             continue  # don't overwrite an existing plan
         entry.planned_hours = prev_entry.planned_hours
         filled += 1

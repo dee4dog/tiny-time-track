@@ -38,6 +38,7 @@
 </div>
 
 <h3>By employee</h3>
+<div class="table-scroll">
 <table class="data-table">
   <thead>
     <tr><th>Employee</th><th class="num">Hours</th><th class="num">Overtime</th><th class="num">Cost</th></tr>
@@ -55,6 +56,7 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 
 <h3>Fee</h3>
 <form method="post" action="/manager/projects/{{ project.id }}/fee" class="fee-form">

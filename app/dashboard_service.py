@@ -43,10 +43,16 @@ def people_overview(db: Session, *, year: int | None = None) -> list[PersonStats
     )
     stats = {e.id: PersonStats(employee=e, capacity=e.available_hours_per_year) for e in employees}
 
-    stmt = select(TimeEntry).where(
-        TimeEntry.week_start >= year_start, TimeEntry.week_start <= year_end
-    )
-    for e in db.scalars(stmt):
+    # Column tuples, not ORM objects: a full year of entries is thousands of
+    # rows, and hydration is the expensive part.
+    stmt = select(
+        TimeEntry.employee_id,
+        TimeEntry.week_start,
+        TimeEntry.day,
+        TimeEntry.planned_hours,
+        TimeEntry.actual_hours,
+    ).where(TimeEntry.week_start >= year_start, TimeEntry.week_start <= year_end)
+    for e in db.execute(stmt):
         s = stats.get(e.employee_id)
         if s is None:
             continue  # entry belongs to a deactivated employee; skip in this view
@@ -71,21 +77,36 @@ class WeekCompliance:
 
 
 def compliance_recent(
-    db: Session, employee: Employee, *, weeks: int = 6
-) -> list[WeekCompliance]:
-    """Plan/actuals submission flags for the last ``weeks`` weeks (newest first)."""
+    db: Session, employees: list[Employee], *, weeks: int = 6
+) -> dict[int, list[WeekCompliance]]:
+    """Plan/actuals flags for the last ``weeks`` weeks, per employee.
+
+    Lists run oldest -> newest so the newest week renders on the right, as
+    the People page legend says. One query covers everyone (instead of
+    weeks x employees point lookups).
+    """
     this_monday = monday_of(date.today())
-    out: list[WeekCompliance] = []
-    for i in range(weeks):
-        wk = this_monday - timedelta(weeks=i)
-        st = db.get(WeekStatus, {"employee_id": employee.id, "week_start": wk})
-        out.append(
-            WeekCompliance(
-                week_start=wk,
-                plan=bool(st and st.planned_submitted_at),
-                actuals=bool(st and st.actuals_submitted_at),
+    week_list = [this_monday - timedelta(weeks=i) for i in range(weeks - 1, -1, -1)]
+
+    stmt = select(WeekStatus).where(
+        WeekStatus.employee_id.in_([e.id for e in employees]),
+        WeekStatus.week_start >= week_list[0],
+    )
+    by_key = {(st.employee_id, st.week_start): st for st in db.scalars(stmt)}
+
+    out: dict[int, list[WeekCompliance]] = {}
+    for e in employees:
+        flags: list[WeekCompliance] = []
+        for wk in week_list:
+            st = by_key.get((e.id, wk))
+            flags.append(
+                WeekCompliance(
+                    week_start=wk,
+                    plan=bool(st and st.planned_submitted_at),
+                    actuals=bool(st and st.actuals_submitted_at),
+                )
             )
-        )
+        out[e.id] = flags
     return out
 
 
@@ -102,9 +123,15 @@ def this_week_board(db: Session) -> tuple[date, list[BoardRow]]:
     employees = list(
         db.scalars(select(Employee).where(Employee.active).order_by(Employee.name))
     )
+    statuses = {
+        st.employee_id: st
+        for st in db.scalars(
+            select(WeekStatus).where(WeekStatus.week_start == this_monday)
+        )
+    }
     rows: list[BoardRow] = []
     for e in employees:
-        st = db.get(WeekStatus, {"employee_id": e.id, "week_start": this_monday})
+        st = statuses.get(e.id)
         rows.append(
             BoardRow(
                 employee=e,
