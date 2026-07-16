@@ -18,7 +18,7 @@ from app.database import SessionLocal
 from app.reminders import run_reminder
 from app.settings_store import get_bool, get_setting
 
-log = logging.getLogger("timetrack.scheduler")
+log = logging.getLogger("tinytimetrack.scheduler")
 
 _DOW = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 

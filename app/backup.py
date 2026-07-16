@@ -13,8 +13,15 @@ from pathlib import Path
 from app.config import config
 
 RETENTION_DAYS = 30
-_PREFIX = "timetrack-"
+_PREFIX = "tinytimetrack-"
+# Backups written before the rename; still pruned and listed.
+_LEGACY_PREFIX = "timetrack-"
 _SUFFIX = ".db"
+
+
+def _backup_files() -> list[Path]:
+    d = backup_dir()
+    return list(d.glob(f"{_PREFIX}*{_SUFFIX}")) + list(d.glob(f"{_LEGACY_PREFIX}*{_SUFFIX}"))
 
 
 def backup_dir() -> Path:
@@ -47,7 +54,7 @@ def prune_old_backups(retention_days: int = RETENTION_DAYS) -> int:
     """Delete backups older than the retention window. Returns count removed."""
     cutoff = datetime.now() - timedelta(days=retention_days)
     removed = 0
-    for path in backup_dir().glob(f"{_PREFIX}*{_SUFFIX}"):
+    for path in _backup_files():
         try:
             mtime = datetime.fromtimestamp(path.stat().st_mtime)
             if mtime < cutoff:
@@ -68,7 +75,7 @@ class BackupInfo:
 def list_backups() -> list[BackupInfo]:
     """Most-recent-first list of existing backups for the Settings screen."""
     out: list[BackupInfo] = []
-    for path in backup_dir().glob(f"{_PREFIX}*{_SUFFIX}"):
+    for path in _backup_files():
         st = path.stat()
         out.append(BackupInfo(
             name=path.name,

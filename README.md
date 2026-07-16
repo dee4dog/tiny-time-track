@@ -151,7 +151,7 @@ app is running. Configure the time (and run an on-demand backup) under
 
 **Restore:**
 1. Stop the app (stop the Windows service, see below).
-2. Copy the chosen `timetrack-YYYYMMDD-HHMMSS.db` over your live database file
+2. Copy the chosen `tinytimetrack-YYYYMMDD-HHMMSS.db` over your live database file
    (the path in `TIMETRACK_DB_PATH`), replacing it.
 3. Start the app again.
 
@@ -166,11 +166,11 @@ The app must keep running and restart on reboot. Two documented options:
 ```powershell
 # 1. Download nssm and put nssm.exe somewhere on PATH.
 # 2. Install the service (run PowerShell as Administrator):
-nssm install "Tiny Time Track" "C:\Claud dev\timetrack\.venv\Scripts\python.exe" "-m" "app"
-nssm set "Tiny Time Track" AppDirectory "C:\Claud dev\timetrack"
+nssm install "Tiny Time Track" "C:\dev\TinyTimeTrack\.venv\Scripts\python.exe" "-m" "app"
+nssm set "Tiny Time Track" AppDirectory "C:\dev\TinyTimeTrack"
 nssm set "Tiny Time Track" Start SERVICE_AUTO_START
-nssm set "Tiny Time Track" AppStdout "C:\Claud dev\timetrack\logs\service.log"
-nssm set "Tiny Time Track" AppStderr "C:\Claud dev\timetrack\logs\service.log"
+nssm set "Tiny Time Track" AppStdout "C:\dev\TinyTimeTrack\logs\service.log"
+nssm set "Tiny Time Track" AppStderr "C:\dev\TinyTimeTrack\logs\service.log"
 
 # 3. Start it
 nssm start "Tiny Time Track"
@@ -187,9 +187,9 @@ APScheduler reminders + nightly backup come back with it.
    "Run with highest privileges".
 3. **Triggers:** New → "At startup".
 4. **Actions:** New → Start a program:
-   - Program: `C:\Claud dev\timetrack\.venv\Scripts\python.exe`
+   - Program: `C:\dev\TinyTimeTrack\.venv\Scripts\python.exe`
    - Arguments: `-m app`
-   - Start in: `C:\Claud dev\timetrack`
+   - Start in: `C:\dev\TinyTimeTrack`
 5. **Settings:** tick "If the task fails, restart every 1 minute".
 
 To verify after a reboot, browse to `http://<server>:8000` from another PC.
