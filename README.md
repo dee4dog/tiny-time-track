@@ -5,6 +5,9 @@
 Self-hosted office time tracking and project profitability for the BI as part of AIBe.
 Runs entirely on a local Windows server — no cloud dependencies.
 
+> **Just one person on one computer?** See **[Tiny Time Track Lite](lite/README.md)** —
+> a separate, single-user planner and timesheet app (no login, no manager) in `lite/`.
+
 > **Build status:** Complete — all six phases built and verified.
 > **Phase 1 (Foundation):** database schema, login & role enforcement, settings
 > storage, admin CLI, config.

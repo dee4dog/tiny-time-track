@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<section class="card empty-state">
+  <h1>{{ code }}</h1>
+  <p>{{ message }}</p>
+  <p><a class="btn primary" href="/week">Go to this week</a></p>
+</section>
+{% endblock %}

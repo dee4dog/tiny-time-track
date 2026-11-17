@@ -1,0 +1,74 @@
+{% extends "print_base.html" %}
+{% block title %}Timesheet {{ report.label }}{% endblock %}
+{% block back_url %}/report?start={{ report.start.isoformat() }}&end={{ report.end.isoformat() }}{{ '&saved=1' if report.saved_only }}{% endblock %}
+{% block doc_class %}landscape{% endblock %}
+{% block doc_title %}Timesheet{% endblock %}
+{% block doc_sub %}{{ report.label }} · {{ 'saved timesheets only' if report.saved_only else 'all recorded time' }}{% endblock %}
+{% block body %}
+{% set m = report.matrix %}
+<div class="kpis">
+  <div><span>Total hours</span><strong>{{ hrs(report.total) }}</strong></div>
+  <div><span>Projects</span><strong>{{ report.projects|length }}</strong></div>
+  <div><span>Days with time</span><strong>{{ report.days_worked }}</strong></div>
+  <div><span>Average per day</span><strong>{{ report.avg_per_day }}</strong></div>
+</div>
+{% if report.includes_unsaved %}
+  <p class="status-line draft">Includes {{ hrs(report.unsaved_minutes) }} h from weeks not yet saved as timesheets.</p>
+{% elif report.saved_only and report.unsaved_minutes %}
+  <p class="status-line">{{ hrs(report.unsaved_minutes) }} h from unsaved weeks are not included.</p>
+{% endif %}
+
+{% if m.rows %}
+<table class="doc-table matrix">
+  <thead>
+    <tr>
+      <th class="left" scope="col">Project</th>
+      {% for c in m.columns %}<th class="num" scope="col">{{ c.label }}{% if c.partial %}*{% endif %}</th>{% endfor %}
+      <th class="num" scope="col">Total</th>
+      <th class="num" scope="col">Share</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in m.rows %}
+    <tr>
+      <td class="left">{{ row.project.display }}{% if row.project.code %} <span class="code">{{ row.project.code }}</span>{% endif %}</td>
+      {% for minutes in row.cells %}<td class="num">{{ cell(minutes) }}</td>{% endfor %}
+      <td class="num strong">{{ hrs(row.total) }}</td>
+      <td class="num">{{ '%.1f' % row.project.share }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td class="left">Total</td>
+      {% for minutes in m.column_totals %}<td class="num">{{ hrs(minutes) }}</td>{% endfor %}
+      <td class="num">{{ hrs(m.total) }}</td>
+      <td class="num">100%</td>
+    </tr>
+  </tfoot>
+</table>
+<p class="note-line">Columns are {{ m.unit }}s{% if m.unit == 'week' %} (labelled by their first day in the period){% endif %}.{% if m.has_partial %} * only part of this {{ m.unit }} falls inside the period.{% endif %}</p>
+{% else %}
+  <p class="note-line">No time recorded in this period.</p>
+{% endif %}
+
+{% if detail and report.lines %}
+<h2 class="page-break">Daily detail</h2>
+<table class="doc-table compact">
+  <thead><tr><th class="left" scope="col">Date</th><th class="left" scope="col">Project (as recorded)</th><th class="left" scope="col">Code</th><th class="num" scope="col">Hours</th></tr></thead>
+  <tbody>
+  {% for line in report.lines %}
+    <tr><td class="left nowrap">{{ line.day | dday }} {{ line.day.year }}</td><td class="left">{{ line.name }}{% if not line.saved %} *{% endif %}</td>
+      <td class="left">{{ line.code }}</td><td class="num">{{ hrs(line.minutes) }}</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><td class="left" colspan="3">Total</td><td class="num">{{ hrs(report.total) }}</td></tr></tfoot>
+</table>
+{% if report.includes_unsaved %}<p class="note-line">* from a week not yet saved as a timesheet</p>{% endif %}
+{% endif %}
+
+<div class="sign">
+  <div>Signature</div>
+  <div>Date</div>
+</div>
+{% endblock %}

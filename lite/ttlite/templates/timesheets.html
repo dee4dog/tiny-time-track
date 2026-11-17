@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Timesheets — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Timesheets</h1>
+    <p class="subtitle">Saved timesheets are your permanent record of time spent.</p>
+  </div>
+  <a class="btn" href="/report">Report for any period →</a>
+</div>
+
+{% if unsaved %}
+<section class="card warn-card" aria-labelledby="unsaved-h">
+  <h2 id="unsaved-h">Weeks with time not saved yet</h2>
+  <p class="muted small">Open a week and press <strong>Save timesheet</strong> to keep it as a record.</p>
+  <table class="data-table compact">
+    <thead><tr><th scope="col">Week</th><th scope="col" class="num">Actual h</th><th scope="col"><span class="sr-only">Open</span></th></tr></thead>
+    <tbody>
+    {% for start, minutes in unsaved %}
+      <tr>
+        <td>{{ week_label(start) }}</td>
+        <td class="num">{{ hrs(minutes) }}</td>
+        <td class="row-actions"><a class="btn small" href="/week?week={{ start.isoformat() }}">Open &amp; save</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<h2>Saved timesheets</h2>
+{% if saved %}
+<div class="table-wrap">
+<table class="data-table">
+  <thead>
+    <tr><th scope="col">Week</th><th scope="col" class="num">Hours</th><th scope="col">Saved</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+  </thead>
+  <tbody>
+  {% for t in saved %}
+    <tr>
+      <td><a href="/week?week={{ t.week_start.isoformat() }}">{{ week_label(t.week_start) }}</a></td>
+      <td class="num">{{ hrs(t.total) }}</td>
+      <td class="nowrap">{{ t.saved_at | dt }}</td>
+      <td class="row-actions">
+        <a class="btn small" href="/print/timesheet?week={{ t.week_start.isoformat() }}" target="_blank" rel="noopener">Print</a>
+        <a class="btn small ghost" href="/export/report.xlsx?start={{ t.week_start.isoformat() }}&amp;end={{ t.week_end.isoformat() }}&amp;saved=1">Excel</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th scope="row">{{ saved|length }} saved week{{ '' if saved|length == 1 else 's' }}</th>
+      <td class="num">{{ hrs(saved_total) }}</td><td colspan="2"></td></tr>
+  </tfoot>
+</table>
+</div>
+{% else %}
+<div class="card empty-state"><p class="muted">No saved timesheets yet. Fill in a week's actual hours on the
+  <a href="/week">Week</a> page and press <strong>Save timesheet</strong>.</p></div>
+{% endif %}
+
+{% if revisions %}
+<details class="detail-block" id="revisions">
+  <summary>Earlier versions of reopened timesheets ({{ revisions|length }})</summary>
+  <p class="muted small">When a saved week is reopened, the version that was saved is kept here so no record is ever lost.</p>
+  <table class="data-table compact">
+    <thead><tr><th scope="col">Week</th><th scope="col" class="num">Hours</th><th scope="col">Saved</th><th scope="col">Reopened</th><th scope="col"><span class="sr-only">Print</span></th></tr></thead>
+    <tbody>
+    {% for r in revisions %}
+      <tr>
+        <td>{{ week_label(r.week_start) }}</td><td class="num">{{ hrs(r.total) }}</td>
+        <td class="nowrap">{{ r.saved_at | dt }}</td><td class="nowrap">{{ r.reopened_at | dt }}</td>
+        <td class="row-actions"><a class="btn small ghost" href="/print/revision/{{ r.id }}" target="_blank" rel="noopener">Print</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
+
+{% if totals and totals.projects %}
+<h2>Total time per project <span class="muted small">(all saved timesheets, {{ totals.label }})</span></h2>
+<div class="table-wrap">
+<table class="data-table">
+  <thead><tr><th scope="col">Project</th><th scope="col">Code</th><th scope="col" class="num">Hours</th><th scope="col" class="bar-col">Share</th></tr></thead>
+  <tbody>
+  {% for p in totals.projects %}
+    <tr>
+      <td>{{ p.display }}</td><td>{{ p.code }}</td><td class="num">{{ hrs(p.minutes) }}</td>
+      <td class="bar-col"><span class="bar" style="--w: {{ '%.1f' % p.share }}%"></span><span class="bar-label">{{ '%.0f' % p.share }}%</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th scope="row" colspan="2">Total</th><td class="num">{{ hrs(totals.total) }}</td><td></td></tr></tfoot>
+</table>
+</div>
+{% endif %}
+{% endblock %}

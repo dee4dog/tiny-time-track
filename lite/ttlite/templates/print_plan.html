@@ -1,0 +1,44 @@
+{% extends "print_base.html" %}
+{% block title %}Weekly plan {{ label }}{% endblock %}
+{% block back_url %}/week?week={{ week.start.isoformat() }}{% endblock %}
+{% block doc_class %}landscape{% endblock %}
+{% block doc_title %}Weekly plan{% endblock %}
+{% block doc_sub %}{{ label }}{% endblock %}
+{% block body %}
+{% if blank %}<p class="note-line">No hours planned for this week yet — the grid below is left blank to fill in by hand.</p>{% endif %}
+<table class="doc-table">
+  <thead>
+    <tr>
+      <th class="left" scope="col">Project</th>
+      {% for i in week.visible %}<th scope="col" class="num">{{ DAY_NAMES[i] }}<span class="sub">{{ week.dates[i].day }} {{ week.dates[i].strftime('%b') }}</span></th>{% endfor %}
+      <th scope="col" class="num">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="left">{{ r.project.name }}{% if r.project.code %} <span class="code">{{ r.project.code }}</span>{% endif %}</td>
+      {% for i in week.visible %}<td class="num">{{ cell(r.planned[i]) }}</td>{% endfor %}
+      <td class="num strong">{{ cell(r.planned_total) }}</td>
+    </tr>
+  {% else %}
+    {% for _ in range(6) %}<tr><td class="left">&nbsp;</td>{% for i in week.visible %}<td></td>{% endfor %}<td></td></tr>{% endfor %}
+  {% endfor %}
+  </tbody>
+  {% if not blank %}
+  {% set pt = week.day_totals('planned') %}
+  <tfoot>
+    <tr>
+      <td class="left">Day total</td>
+      {% for i in week.visible %}<td class="num">{{ hrs(pt[i]) }}</td>{% endfor %}
+      <td class="num">{{ hrs(week.planned_total) }}</td>
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+
+<section class="notes">
+  <h2>Notes &amp; goals</h2>
+  <div class="notes-box">{{ week.note }}</div>
+</section>
+{% endblock %}

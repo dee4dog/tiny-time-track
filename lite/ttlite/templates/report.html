@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Report {{ report.label }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p class="subtitle">Totalled timesheet for {{ report.label }}</p>
+  </div>
+</div>
+
+<form method="get" action="/report" class="card filter-card">
+  <div class="inline-form">
+    <label>From <input type="date" name="start" value="{{ report.start.isoformat() }}" required></label>
+    <label>To <input type="date" name="end" value="{{ report.end.isoformat() }}" required></label>
+    <label class="check"><input type="checkbox" name="saved" value="1" {{ 'checked' if report.saved_only }}> Saved timesheets only</label>
+    <button class="btn primary" type="submit">Show report</button>
+  </div>
+  <p class="quick">Quick:
+    {% for name, s, e in ranges %}
+      <a href="/report?start={{ s.isoformat() }}&amp;end={{ e.isoformat() }}{{ '&saved=1' if report.saved_only }}">{{ name }}</a>
+    {% endfor %}
+  </p>
+</form>
+
+<div class="stat-cards">
+  <div class="stat"><span class="label">Total hours</span><span class="value">{{ hrs(report.total) }}</span></div>
+  <div class="stat"><span class="label">Projects</span><span class="value">{{ report.projects|length }}</span></div>
+  <div class="stat"><span class="label">Days with time</span><span class="value">{{ report.days_worked }}</span></div>
+  <div class="stat"><span class="label">Average per day</span><span class="value">{{ report.avg_per_day }}</span></div>
+</div>
+
+{% if report.unsaved_minutes %}
+  {% if report.saved_only %}
+    <div class="banner info">{{ hrs(report.unsaved_minutes) }} h from weeks that aren't saved yet are left out.
+      <a href="/timesheets">See unsaved weeks</a>.</div>
+  {% else %}
+    <div class="banner warn">Includes {{ hrs(report.unsaved_minutes) }} h from weeks not yet saved as timesheets
+      (marked “Not saved”). Tick <em>Saved timesheets only</em> for records only.</div>
+  {% endif %}
+{% endif %}
+
+<div class="btn-row export-row">
+  <a class="btn primary" href="/print/report?{{ query }}" target="_blank" rel="noopener">Print / PDF</a>
+  <a class="btn" href="/print/report?{{ query }}&amp;detail=1" target="_blank" rel="noopener">Print with daily detail</a>
+  <a class="btn" href="/export/report.xlsx?{{ query }}">Excel</a>
+  <a class="btn" href="/export/report.csv?{{ query }}&amp;kind=totals">CSV (totals)</a>
+  <a class="btn ghost" href="/export/report.csv?{{ query }}">CSV (daily)</a>
+</div>
+
+{% if report.projects %}
+{% set m = report.matrix %}
+<h2>Timesheet <span class="muted small">— hours per project per {{ m.unit }}</span></h2>
+<div class="table-wrap">
+<table class="data-table matrix">
+  <caption class="sr-only">Totalled timesheet: hours per project per {{ m.unit }}, with totals</caption>
+  <thead>
+    <tr>
+      <th scope="col">Project</th>
+      {% for c in m.columns %}<th scope="col" class="num" title="{{ c.start | d }} – {{ c.end | d }}">{{ c.label }}{% if c.partial %}*{% endif %}</th>{% endfor %}
+      <th scope="col" class="num">Total</th><th scope="col" class="bar-col">Share</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in m.rows %}
+    <tr>
+      <th scope="row">{{ row.project.display }}{% if row.project.code %} <span class="code">{{ row.project.code }}</span>{% endif %}</th>
+      {% for minutes in row.cells %}<td class="num">{{ cell(minutes) }}</td>{% endfor %}
+      <td class="num strong">{{ hrs(row.total) }}</td>
+      <td class="bar-col"><span class="bar" style="--w: {{ '%.1f' % row.project.share }}%"></span><span class="bar-label">{{ '%.0f' % row.project.share }}%</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th scope="row">Total</th>
+      {% for minutes in m.column_totals %}<td class="num">{{ hrs(minutes) }}</td>{% endfor %}
+      <td class="num">{{ hrs(m.total) }}</td><td></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+{% if m.has_partial %}<p class="hint small">* only part of this {{ m.unit }} falls inside the period.</p>{% endif %}
+
+<h2>Weeks</h2>
+<div class="table-wrap">
+<table class="data-table compact">
+  <thead><tr><th scope="col">Week</th><th scope="col">Status</th><th scope="col" class="num">Hours</th></tr></thead>
+  <tbody>
+  {% for w in report.active_weeks %}
+    <tr>
+      <td><a href="/week?week={{ w.start.isoformat() }}">{{ week_label(w.start) }}</a>{% if w.partial %} <span class="tag">part week</span>{% endif %}</td>
+      <td>{% if w.saved %}<span class="pill ok">Saved</span>{% else %}<span class="pill miss">Not saved</span>{% endif %}</td>
+      <td class="num">{{ hrs(w.minutes) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th scope="row" colspan="2">Total</th><td class="num">{{ hrs(report.total) }}</td></tr></tfoot>
+</table>
+</div>
+{% if report.empty_weeks %}<p class="hint small">{{ report.empty_weeks }} week{{ '' if report.empty_weeks == 1 else 's' }} in this period with no time {{ 'is' if report.empty_weeks == 1 else 'are' }} not listed.</p>{% endif %}
+
+<details class="detail-block">
+  <summary>Daily detail ({{ report.lines|length }} entries)</summary>
+  <div class="table-wrap">
+  <table class="data-table compact">
+    <thead><tr><th scope="col">Date</th><th scope="col">Project</th><th scope="col">Code</th><th scope="col">Status</th><th scope="col" class="num">Hours</th></tr></thead>
+    <tbody>
+    {% for line in report.lines %}
+      <tr><td class="nowrap">{{ line.day | dday }} {{ line.day.year }}</td><td>{{ line.name }}</td><td>{{ line.code }}</td>
+        <td>{{ 'Saved' if line.saved else 'Not saved' }}</td><td class="num">{{ hrs(line.minutes) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</details>
+{% else %}
+<div class="card empty-state"><p class="muted">No {{ 'saved ' if report.saved_only }}time recorded in this period.</p></div>
+{% endif %}
+{% endblock %}
