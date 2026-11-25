@@ -6,7 +6,8 @@ Self-hosted office time tracking and project profitability for the BI as part of
 Runs entirely on a local Windows server — no cloud dependencies.
 
 > **Just one person on one computer?** See **[Tiny Time Track Lite](lite/README.md)** —
-> a separate, single-user planner and timesheet app (no login, no manager) in `lite/`.
+> a separate, single-user planner and timesheet app in `lite/`. It's a small native
+> Windows program written in Rust, with no login and no server.
 
 > **Build status:** Complete — all six phases built and verified.
 > **Phase 1 (Foundation):** database schema, login & role enforcement, settings
